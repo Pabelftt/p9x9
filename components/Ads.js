@@ -11,13 +11,6 @@ export default function Ads() {
         "https://welcomingexpulsion.com/bf/9d/72/bf9d7240f3f011087fb60ee5c6fe440e.js";
       adScript.async = true;
       document.body.appendChild(adScript);
-
-      // Popunder
-      const popunderScript = document.createElement("script");
-      popunderScript.src =
-        "https://welcomingexpulsion.com/50/0e/dc/500edc4c3e32ebf68d2d206485d50b13.js";
-      popunderScript.async = true;
-      document.body.appendChild(popunderScript);
     };
 
     if (document.readyState === "complete") {
