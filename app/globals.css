@@ -843,16 +843,94 @@ main {
   display: block;
 }
 
-/* invisible click layer — covers the ENTIRE video (first visit redirect flow):
-   any click on the video (center, edges, play button area) opens the ad link
-   in a new tab; controls are still visible, returning visitors (within 10 min)
-   have no layer and full control */
-.ad-redirect-layer {
+.video-continue-backdrop {
   position: absolute;
   inset: 0;
-  z-index: 50;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(5px);
+}
+
+.video-continue-modal {
+  width: min(100%, 440px);
+  padding: 28px 32px 24px;
+  text-align: center;
+  background: #15161f;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+  animation: popIn 0.22s ease-out;
+}
+
+.video-continue-icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 14px;
+  border-radius: 17px;
+  color: #fff;
+  font-size: 1.45rem;
+  background: linear-gradient(135deg, #6878ff, #ec45ac);
+  box-shadow: 0 8px 24px rgba(151, 89, 255, 0.28);
+}
+
+.video-continue-modal h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.video-continue-modal p {
+  margin: 12px 0 20px;
+  color: #a6a8bb;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.video-continue-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.video-continue-actions button {
+  min-width: 120px;
+  min-height: 46px;
+  border: 0;
+  border-radius: 16px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 800;
   cursor: pointer;
-  background: transparent;
+  transition: filter 0.2s, background 0.2s;
+}
+
+.video-continue-actions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.video-continue-primary {
+  color: #fff;
+  background: #e0000b;
+  box-shadow: 0 7px 18px rgba(224, 0, 11, 0.28);
+}
+
+.video-continue-primary:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.video-continue-secondary {
+  color: #f4f4fa;
+  background: #1d1f2a;
+}
+
+.video-continue-secondary:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-2);
 }
 
 .player-info {
@@ -2445,4 +2523,3 @@ main {
     grid-template-columns: 1fr;
   }
 }
-

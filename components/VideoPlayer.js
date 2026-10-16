@@ -2,11 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { siteConfig } from "@/lib/siteConfig";
-import AdRedirectLayer from "./AdRedirectLayer";
 
-export default function VideoPlayer({ routeName, initialData }) {
+export default function VideoPlayer({
+  routeName,
+  initialData,
+  hasContinued,
+  continueExpiresAt,
+  redirectAvailable
+}) {
   const [oneData, setOneData] = useState(initialData || null);
   const [error, setError] = useState(null);
+  const [showContinue, setShowContinue] = useState(false);
+  const [continuePending, setContinuePending] = useState(false);
+  const [continueGranted, setContinueGranted] = useState(hasContinued);
+  const [activeContinueExpiry, setActiveContinueExpiry] =
+    useState(continueExpiresAt);
+  const [videoSourceFallback, setVideoSourceFallback] = useState(false);
 
   // background view count increment + fresh data (same cookie logic as Express)
   useEffect(() => {
@@ -33,6 +44,19 @@ export default function VideoPlayer({ routeName, initialData }) {
     };
   }, [routeName]);
 
+  useEffect(() => {
+    if (!videoSourceFallback) return;
+    document.getElementById("player")?.load();
+  }, [videoSourceFallback]);
+
+  useEffect(() => {
+    if (!activeContinueExpiry) return;
+
+    const timeout = Math.max(0, activeContinueExpiry - Date.now());
+    const timer = window.setTimeout(() => setContinueGranted(false), timeout);
+    return () => window.clearTimeout(timer);
+  }, [activeContinueExpiry]);
+
   if (error) {
     return (
       <div style={{ textAlign: "center", padding: "60px 20px", color: "#ff7a8f" }}>
@@ -50,21 +74,143 @@ export default function VideoPlayer({ routeName, initialData }) {
     );
   }
 
+  async function handleContinue() {
+    if (continuePending) return;
+
+    setContinuePending(true);
+    setShowContinue(false);
+    setContinueGranted(true);
+    setActiveContinueExpiry(Date.now() + 300_000);
+
+    const player = document.getElementById("player");
+    const playDirectly = () => {
+      if (player instanceof HTMLVideoElement) {
+        player.play().catch((err) => {
+          console.error("Video playback could not start:", err);
+        });
+      }
+    };
+
+    if (!redirectAvailable) playDirectly();
+
+    try {
+      const response = await fetch("/api/video-continue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ routeName })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (Number.isSafeInteger(result.returnExpiresAt)) {
+          setActiveContinueExpiry(result.returnExpiresAt);
+        }
+        if (result.redirectAvailable) {
+          const returnPath = `/videos/${encodeURIComponent(routeName)}`;
+          if (player instanceof HTMLVideoElement) player.pause();
+          window.location.assign(
+            `/api/video-continue?returnPath=${encodeURIComponent(returnPath)}`
+          );
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Unable to prepare video redirect:", err);
+    }
+
+    setContinuePending(false);
+    if (redirectAvailable) playDirectly();
+  }
+
   return (
     <>
-      <div className="player-wrap">
+      <div
+        className="player-wrap"
+        onClickCapture={(event) => {
+          if (
+            continueGranted ||
+            showContinue ||
+            event.target !== document.getElementById("player")
+          ) {
+            return;
+          }
+
+          event.preventDefault();
+          event.stopPropagation();
+          setShowContinue(true);
+        }}
+        onPlay={(event) => {
+          if (!continueGranted && !showContinue) {
+            event.currentTarget.pause();
+            setShowContinue(true);
+          }
+        }}
+      >
         <video
           id="player"
           playsInline
           controls
+          preload="metadata"
           controlsList="nodownload"
           disablePictureInPicture
           onContextMenu={(e) => e.preventDefault()}
+          onError={() => {
+            if (!videoSourceFallback) {
+              setVideoSourceFallback(true);
+              return;
+            }
+            console.error("Video could not be loaded from its source.");
+          }}
           poster={oneData.imageLink}
         >
-          <source src={oneData.videoLink} type="video/mp4" />
+          <source
+            src={
+              videoSourceFallback
+                ? oneData.videoLink
+                : `/api/videos/${encodeURIComponent(routeName)}/media`
+            }
+            type="video/mp4"
+          />
         </video>
-        <AdRedirectLayer routeName={routeName} />
+        {showContinue && (
+          <div className="video-continue-backdrop">
+            <section
+              className="video-continue-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="video-continue-title"
+              aria-describedby="video-continue-description"
+            >
+              <div className="video-continue-icon" aria-hidden="true">
+                <i className="fas fa-external-link-alt"></i>
+              </div>
+              <h2 id="video-continue-title">Continue to the video link?</h2>
+              <p id="video-continue-description">
+                {redirectAvailable
+                  ? "Continue চাপলে আপনি নির্ধারিত link-এ যাবেন। ফিরে এলে ভিডিও সরাসরি চালু হবে।"
+                  : "Continue চাপলে ভিডিও সরাসরি চালু হবে।"}
+              </p>
+              <div className="video-continue-actions">
+                <button
+                  type="button"
+                  className="video-continue-secondary"
+                  onClick={() => setShowContinue(false)}
+                  disabled={continuePending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="video-continue-primary"
+                  onClick={handleContinue}
+                  disabled={continuePending}
+                >
+                  {continuePending ? "Please wait..." : "Continue"}
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
       </div>
 
       <div className="player-info">

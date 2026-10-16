@@ -1,11 +1,18 @@
 // /videos/:routeName - same logic as old controllers/videoController.js singleData
 // (server does a read-only query for SEO + SSR data; the view count + cookie logic stays in /api/videos/:routeName)
 import { Suspense } from "react";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { connectDB } from "@/lib/db";
 import Post from "@/models/Post";
 import { getVideoPage } from "@/lib/data";
 import { siteConfig } from "@/lib/siteConfig";
+import {
+  VIDEO_RETURN_COOKIE,
+  getVideoReturnCookieExpiresAt,
+  getVideoRedirectUrl,
+  getVideoReturnPath
+} from "@/lib/videoContinue";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import VideoPlayer from "@/components/VideoPlayer";
@@ -68,6 +75,12 @@ export default async function SingleVideoPage({ params }) {
   if (!oneData || !oneData.video) notFound();
 
   const { video } = oneData;
+  const returnPath = getVideoReturnPath(routeNameLower);
+  const videoReturnCookie = (await cookies()).get(VIDEO_RETURN_COOKIE)?.value;
+  const videoReturnExpiresAt = getVideoReturnCookieExpiresAt(
+    videoReturnCookie,
+    returnPath
+  );
 
   // ================= TIME FORMAT (same as old singleData) =================
   let isoTime = null;
@@ -136,14 +149,20 @@ export default async function SingleVideoPage({ params }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
-      <link rel="preload" as="video" href={video.videoLink} />
       <link rel="preload" as="image" href={video.imageLink} />
 
       <Header />
       <main>
         <div className="video-page">
           <div className="player-shell">
-            <VideoPlayer routeName={routeNameLower} initialData={video} />
+            <VideoPlayer
+              key={routeNameLower}
+              routeName={routeNameLower}
+              initialData={video}
+              hasContinued={Boolean(videoReturnExpiresAt)}
+              continueExpiresAt={videoReturnExpiresAt}
+              redirectAvailable={Boolean(getVideoRedirectUrl())}
+            />
           </div>
 
           <aside className="related-col">
