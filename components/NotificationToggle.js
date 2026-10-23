@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+const NOTIFICATION_PROMPT_DISMISSED_KEY = "p9x9-notification-prompt-dismissed";
+const NOTIFICATION_PROMPT_REPEAT_MS = 30_000;
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -35,6 +38,7 @@ export default function NotificationToggle() {
   const [subscribed, setSubscribed] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [message, setMessage] = useState("");
+  const promptTimer = useRef(null);
 
   useEffect(() => {
     setMounted(true);
@@ -46,7 +50,32 @@ export default function NotificationToggle() {
 
     const current = Notification.permission;
     setPermission(current);
-    setToastVisible(current === "default");
+    try {
+      const dismissedAtValue = window.localStorage.getItem(
+        NOTIFICATION_PROMPT_DISMISSED_KEY
+      );
+      const dismissedAt = Number(dismissedAtValue);
+      const remaining =
+        dismissedAtValue && Number.isFinite(dismissedAt)
+          ? Math.max(0, NOTIFICATION_PROMPT_REPEAT_MS - (Date.now() - dismissedAt))
+          : 0;
+
+      if (current === "granted") {
+        window.localStorage.removeItem(NOTIFICATION_PROMPT_DISMISSED_KEY);
+        setToastVisible(false);
+      } else {
+        setToastVisible(remaining === 0);
+        if (remaining > 0) {
+          promptTimer.current = window.setTimeout(() => {
+            setPermission(Notification.permission);
+            setToastVisible(Notification.permission !== "granted");
+          }, remaining);
+        }
+      }
+    } catch (error) {
+      console.error("Unable to read notification prompt preference:", error);
+      setToastVisible(current !== "granted");
+    }
 
     if (current === "granted" && "serviceWorker" in navigator) {
       navigator.serviceWorker
@@ -63,7 +92,54 @@ export default function NotificationToggle() {
           setMessage(error.message || "Unable to check your notification subscription.");
         });
     }
+    return () => {
+      window.clearTimeout(promptTimer.current);
+    };
   }, []);
+
+  function clearPromptDismissal() {
+    window.clearTimeout(promptTimer.current);
+    promptTimer.current = null;
+    try {
+      window.localStorage.removeItem(NOTIFICATION_PROMPT_DISMISSED_KEY);
+    } catch (error) {
+      console.error("Unable to clear notification prompt preference:", error);
+    }
+  }
+
+  function dismissPrompt() {
+    setToastVisible(false);
+    try {
+      window.localStorage.setItem(
+        NOTIFICATION_PROMPT_DISMISSED_KEY,
+        String(Date.now())
+      );
+    } catch (error) {
+      console.error("Unable to save notification prompt preference:", error);
+    }
+    window.clearTimeout(promptTimer.current);
+    promptTimer.current = window.setTimeout(() => {
+      const current = Notification.permission;
+      setPermission(current);
+      setToastVisible(current !== "granted");
+      if (current === "granted") clearPromptDismissal();
+    }, NOTIFICATION_PROMPT_REPEAT_MS);
+  }
+
+  useEffect(() => {
+    if (!toastVisible || !("Notification" in window)) return undefined;
+
+    const permissionCheck = window.setInterval(() => {
+      const current = Notification.permission;
+      setPermission(current);
+      if (current === "granted") {
+        setToastVisible(false);
+        clearPromptDismissal();
+      }
+    }, 2000);
+
+    return () => window.clearInterval(permissionCheck);
+  }, [toastVisible]);
 
   if (!mounted || permission === "unsupported") {
     return null;
@@ -103,21 +179,24 @@ export default function NotificationToggle() {
       }
 
       let currentPermission = Notification.permission;
+      if (currentPermission === "denied") {
+        setPermission(currentPermission);
+        setToastVisible(true);
+        setMessage("Notifications are blocked. Allow them in your browser's site settings.");
+        return;
+      }
       if (currentPermission === "default") {
         currentPermission = await Notification.requestPermission();
       }
       setPermission(currentPermission);
-      setToastVisible(currentPermission === "default");
 
       if (currentPermission !== "granted") {
-        setMessage(
-          currentPermission === "denied"
-            ? "Notifications are blocked in your browser settings."
-            : "Choose Allow in the browser prompt to enable notifications."
-        );
+        dismissPrompt();
         return;
       }
 
+      setToastVisible(false);
+      clearPromptDismissal();
       await navigator.serviceWorker.register("/sw.js");
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
@@ -150,22 +229,57 @@ export default function NotificationToggle() {
         Notification
       </button>
 
-      {toastVisible && isConfigured && (
-        <div className="notification-toast" role="dialog" aria-label="Notification permission">
-          <div>
-            <strong>Get notifications</strong>
-            <p>Enable notifications for new videos and site updates. Your browser will ask for permission.</p>
-          </div>
-          <div className="notification-toast-actions">
-            <button type="button" onClick={handleToggle}>Enable</button>
+      {toastVisible && (
+        <div className="notification-prompt-backdrop">
+          <section
+            className="notification-prompt"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notification-prompt-title"
+            aria-describedby="notification-prompt-description"
+          >
+            <span className="notification-prompt-icon">
+              <i className="fas fa-bell" aria-hidden="true"></i>
+            </span>
+            <h2 id="notification-prompt-title">Stay up to date</h2>
+            <p id="notification-prompt-description">
+              {permission === "denied"
+                ? "Notifications are blocked. Change this site's notification permission in your browser settings, then return here."
+                : "Allow notifications to hear about new videos and important site updates."}
+            </p>
+            {(!isConfigured || permission === "denied") && (
+              <p className="notification-prompt-error" role="alert">
+                {permission === "denied"
+                  ? "After changing the browser setting, this message will close automatically."
+                  : "Notifications are not available right now."}
+              </p>
+            )}
+            <div className="notification-prompt-actions">
+              <button
+                type="button"
+                className="notification-prompt-enable"
+                onClick={handleToggle}
+                disabled={!isConfigured || permission === "denied"}
+              >
+                Enable notifications
+              </button>
+              <button
+                type="button"
+                className="notification-prompt-dismiss"
+                onClick={dismissPrompt}
+              >
+                Maybe later
+              </button>
+            </div>
             <button
               type="button"
-              className="notification-toast-dismiss"
-              onClick={() => setToastVisible(false)}
+              className="notification-prompt-close"
+              aria-label="Close notification message"
+              onClick={dismissPrompt}
             >
-              Not now
+              &times;
             </button>
-          </div>
+          </section>
         </div>
       )}
       {message && (
