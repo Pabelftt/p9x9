@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { siteConfig } from "@/lib/siteConfig";
+import AdminIcon from "@/components/AdminIcon";
 
 // Admin login (posts JSON to /api/admin/login, cookie set server-side)
 export default function AdminLogin() {
@@ -46,13 +47,13 @@ export default function AdminLogin() {
           <span className="adm-brand-badge">Admin</span>
         </a>
         <h1 className="adm-login-title">
-          <i className="fas fa-lock"></i> Welcome back
+          <AdminIcon name="lock" className="adm-icon" /> Welcome back
         </h1>
         <p className="adm-login-sub">Sign in to manage your content</p>
 
         {error && (
           <div className="adm-alert adm-alert-error" role="alert">
-            <i className="fas fa-triangle-exclamation"></i>
+            <AdminIcon name="activity" className="adm-icon" />
             {error}
           </div>
         )}
@@ -61,7 +62,7 @@ export default function AdminLogin() {
           <div className="adm-field">
             <label htmlFor="admin-username">Username</label>
             <div className="adm-input-box">
-              <i className="fas fa-user"></i>
+              <AdminIcon name="user" className="adm-icon" />
               <input
                 id="admin-username"
                 type="text"
@@ -78,7 +79,7 @@ export default function AdminLogin() {
           <div className="adm-field">
             <label htmlFor="admin-password">Password</label>
             <div className="adm-input-box">
-              <i className="fas fa-key"></i>
+              <AdminIcon name="key" className="adm-icon" />
               <input
                 id="admin-password"
                 type="password"
@@ -95,24 +96,16 @@ export default function AdminLogin() {
           <button type="submit" className="adm-btn adm-btn-primary adm-btn-block" disabled={loading}>
             {loading ? (
               <>
-                <i className="fas fa-spinner fa-spin"></i> Logging in...
+                <AdminIcon name="spinner" className="adm-icon adm-icon-spin" /> Logging in...
               </>
             ) : (
               <>
-                <i className="fas fa-right-to-bracket"></i> Login
+                <AdminIcon name="login" className="adm-icon" /> Login
               </>
             )}
           </button>
         </form>
       </div>
-
-      {/* FontAwesome (async, non render-blocking) */}
-      <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        media="print"
-        onLoad={(e) => (e.currentTarget.media = "all")}
-      />
     </div>
   );
 }

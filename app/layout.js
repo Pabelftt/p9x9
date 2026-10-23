@@ -1,6 +1,7 @@
 import "./globals.css";
 import Script from "next/script";
 import { siteConfig } from "@/lib/siteConfig";
+import SiteAds from "@/components/SiteAds";
 
 export const metadata = {
   metadataBase: new URL(siteConfig.url),
@@ -55,16 +56,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <meta name="google-adsense-account" content="ca-pub-4300319598686746" />
-        {/* AdSense stays a raw head tag (loads ASAP); adsbygoogle rewrites its own
-            tag at runtime, so hydration warnings for it are suppressed.
-            next/script is not used here because it adds data-nscript, which
-            adsbygoogle complains about */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4300319598686746"
-          crossOrigin="anonymous"
-          suppressHydrationWarning
+        <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         />
       </head>
       <body>
@@ -72,10 +67,9 @@ export default function RootLayout({ children }) {
         <noscript dangerouslySetInnerHTML={{ __html: `<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-TNK4FPN5" height="0" width="0" style="display:none;visibility:hidden"></iframe>` }} />
         {/* End Google Tag Manager (noscript) */}
         {children}
+        <SiteAds />
 
-        {/* Analytics + AdSense load after hydration via next/script — loading
-            them as raw head tags lets adsbygoogle mutate the DOM around the
-            tags and break React hydration */}
+        {/* Analytics load after hydration to avoid modifying the initial document. */}
         <Script
           strategy="afterInteractive"
           src="https://www.googletagmanager.com/gtag/js?id=G-T9KY79TYK4"

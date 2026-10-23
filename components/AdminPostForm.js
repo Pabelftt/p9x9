@@ -2,21 +2,22 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import AdminIcon from "@/components/AdminIcon";
 
 // Edit form for a single post. Submits JSON to /api/admin/update/:id and
 // navigates back to /admin/update on success (stays on the current origin).
 const FIELDS = [
-  { id: "routeName", label: "Route Name", icon: "fa-route" },
-  { id: "title", label: "Title", icon: "fa-heading" },
-  { id: "description", label: "Description", icon: "fa-align-left" },
-  { id: "imageLink", label: "Image Link", icon: "fa-image" },
-  { id: "videoLink", label: "Video Link", icon: "fa-video" },
-  { id: "totalView", label: "Total Views", icon: "fa-eye" },
-  { id: "duration", label: "Duration", icon: "fa-clock" },
+  { id: "routeName", label: "Route Name", icon: "route" },
+  { id: "title", label: "Title", icon: "heading" },
+  { id: "description", label: "Description", icon: "activity" },
+  { id: "imageLink", label: "Image Link", icon: "image" },
+  { id: "videoLink", label: "Video Link", icon: "video" },
+  { id: "totalView", label: "Total Views", icon: "eye" },
+  { id: "duration", label: "Duration", icon: "clock" },
   {
     id: "category",
     label: "Category",
-    icon: "fa-tags",
+    icon: "tag",
     hint: "Separate multiple categories with commas"
   }
 ];
@@ -95,7 +96,7 @@ export default function AdminPostForm({ id, post }) {
             </label>
             <div className="adm-input-row">
               <div className="adm-input-box">
-                <i className={`fas ${f.icon}`}></i>
+                <AdminIcon name={f.icon} className="adm-icon" />
                 <input
                   id={f.id}
                   name={f.id}
@@ -109,13 +110,13 @@ export default function AdminPostForm({ id, post }) {
               </div>
               <div className="adm-input-tools">
                 <button type="button" className="adm-chip chip-copy" onClick={() => copyInput(f.id)} title="Copy">
-                  <i className="fas fa-copy"></i>
+                  <AdminIcon name="copy" className="adm-icon" />
                 </button>
                 <button type="button" className="adm-chip chip-paste" onClick={() => pasteInput(f.id)} title="Paste">
-                  <i className="fas fa-paste"></i>
+                  <AdminIcon name="paste" className="adm-icon" />
                 </button>
                 <button type="button" className="adm-chip chip-clear" onClick={() => clearInput(f.id)} title="Clear">
-                  <i className="fas fa-eraser"></i>
+                  <AdminIcon name="erase" className="adm-icon" />
                 </button>
               </div>
             </div>
@@ -124,22 +125,22 @@ export default function AdminPostForm({ id, post }) {
 
         {error && (
           <div className="adm-alert adm-alert-error" role="alert">
-            <i className="fas fa-triangle-exclamation"></i> {error}
+            <AdminIcon name="activity" className="adm-icon" /> {error}
           </div>
         )}
 
         <div className="adm-form-actions">
           <a href="/admin/update" className="adm-btn adm-btn-ghost">
-            <i className="fas fa-arrow-left"></i> Cancel
+            <AdminIcon name="arrowLeft" className="adm-icon" /> Cancel
           </a>
           <button type="submit" className="adm-btn adm-btn-primary" disabled={loading}>
             {loading ? (
               <>
-                <i className="fas fa-spinner fa-spin"></i> Saving...
+                <AdminIcon name="spinner" className="adm-icon adm-icon-spin" /> Saving...
               </>
             ) : (
               <>
-                <i className="fas fa-floppy-disk"></i> Save Changes
+                <AdminIcon name="check" className="adm-icon" /> Save Changes
               </>
             )}
           </button>

@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import AdminListLoader from "@/components/AdminListLoader";
 import AdminListSkeleton from "@/components/AdminListSkeleton";
 import AdminShell from "@/components/AdminShell";
+import { getAdmin } from "@/lib/adminAuth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,9 @@ export const metadata = {
 };
 
 export default async function DataToBdP9x9Page() {
+  const admin = await getAdmin();
+  if (!admin) redirect("/admin");
+
   return (
     <AdminShell
       title="Data to Desi.P9X9"

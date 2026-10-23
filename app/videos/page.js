@@ -7,7 +7,6 @@ import SearchForm from "@/components/SearchForm";
 import VideoSection from "@/components/VideoSection";
 import GridSkeleton from "@/components/GridSkeleton";
 import AdultWarning from "@/components/AdultWarning";
-import Ads from "@/components/Ads";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -24,7 +23,11 @@ export const metadata = {
 };
 
 export default async function VideosPage({ searchParams }) {
-  const { q, category } = await searchParams;
+  const params = await searchParams;
+  const q = typeof params.q === "string" ? params.q.slice(0, 100) : "";
+  const category =
+    typeof params.category === "string" ? params.category.slice(0, 100) : "";
+  const sort = params.sort === "popular" ? "popular" : "latest";
 
   return (
     <>
@@ -36,21 +39,19 @@ export default async function VideosPage({ searchParams }) {
         </div>
 
         <div className="indexContainer">
-          <SearchForm />
+          <SearchForm action="/videos" query={q} category={category} sort={sort} />
 
           <h2 className="section-title">
-            <span>{q ? `Results for: ${q}` : category ? `Category: ${category}` : "Browse Videos"}</span>
+            <span>{q ? `Results for: ${q}` : category ? `Category: ${category}` : sort === "popular" ? "Most Viewed Videos" : "Browse Videos"}</span>
           </h2>
 
           <Suspense fallback={<GridSkeleton />}>
-            <VideoSection query={q} category={category} />
+            <VideoSection query={q} category={category} sort={sort} />
           </Suspense>
         </div>
       </main>
       <Footer />
       <AdultWarning />
-      <Ads />
-      
     </>
   );
 }

@@ -1,0 +1,498 @@
+# MASTER PROMPT — P9X9.COM COMPLETE WEBSITE UPGRADE
+
+You are a senior full-stack web developer, software architect, UI/UX designer, security engineer, and performance optimization specialist.
+
+Your task is to thoroughly inspect, improve, modernize, and upgrade my existing **P9X9.com** project using the code already present in this repository.
+
+## 1. CRITICAL RULE: DO NOT REMOVE EXISTING FUNCTIONALITY
+
+**This is the most important requirement.**
+
+- Do NOT remove, disable, replace, or break any existing business logic, routes, APIs, database models, schemas, fields, controllers, middleware, authentication, integrations, or working features.
+- Do NOT rewrite the entire application from scratch.
+- Do NOT replace the current technology stack with another framework without a compelling technical reason and my explicit approval.
+- Do NOT rename existing routes, API endpoints, database fields, environment variables, or important functions if doing so could break compatibility.
+- Do NOT delete existing features just because you think a new implementation is better.
+- Preserve backward compatibility with existing URLs, API response formats, stored database records, and integrations.
+- Prefer additive, backward-compatible changes over destructive modifications.
+- If a database change is necessary, use a backward-compatible migration or optional fields with safe defaults. Never delete existing data.
+- Preserve existing SEO functionality, metadata, canonical URLs, Open Graph tags, Twitter cards, structured data, sitemap, robots.txt, and other working SEO features.
+- Preserve existing video links, thumbnails, categories, descriptions, view counts, pagination behavior, and admin functionality.
+- Before modifying any file, understand how it interacts with the rest of the application.
+
+If any requested feature conflicts with existing functionality, preserve the existing functionality first and implement the new feature in a compatible way.
+
+**Never make destructive changes without explaining the risk and receiving my approval.**
+
+## 2. FIRST: INSPECT THE ENTIRE PROJECT
+
+Before writing or changing code:
+
+1. Inspect the complete project directory and identify its actual framework, runtime, dependencies, database, architecture, routes, APIs, models, templates, stylesheets, scripts, middleware, and deployment configuration.
+2. Read the relevant source files instead of guessing how the application works.
+3. Identify all existing features and document how they work.
+4. Identify existing homepage behavior, video listing pages, video detail pages, search, categories, pagination, admin routes, authentication, analytics, and integrations wherever present.
+5. Identify bugs, security vulnerabilities, performance bottlenecks, accessibility issues, duplicate code, and missing error handling.
+6. Inspect `package.json`, lockfiles, `.gitignore`, `.env.example` if present, and deployment files.
+7. Check the Git working tree before making changes. Do not overwrite or discard my existing uncommitted work.
+8. Create a clear implementation plan and a checklist of files likely to change.
+
+After inspection, implement the upgrades incrementally in the existing architecture. Do not stop after merely providing recommendations. Complete the implementation where possible, run appropriate tests, and report anything that cannot be completed.
+
+Do not invent project files, database fields, routes, or APIs without first checking whether equivalent functionality already exists.
+
+## 3. MODERN, SMART, PROFESSIONAL UI/UX REDESIGN
+
+Redesign the existing user interface into a polished, modern, professional, responsive website while preserving its functionality.
+
+### Design requirements
+
+- Use a modern, premium visual design with a consistent design system.
+- Use a carefully selected color palette with professional color grading and harmonious color combinations.
+- Suggested direction: deep navy/charcoal backgrounds, elegant blue or cyan accents, clean neutral surfaces, subtle gradients, and accessible text contrast. Adapt the palette to the existing P9X9 branding where appropriate.
+- Use CSS variables/design tokens for colors, spacing, borders, shadows, typography, and radii.
+- Create clean layouts, balanced spacing, readable typography, consistent alignment, modern cards, attractive buttons, and polished forms.
+- Add subtle transitions and animations where useful. Avoid excessive animation, visual clutter, and unnecessary effects.
+- Improve headers, navigation, search UI, video cards, category sections, pagination or loading indicators, footer, empty states, error states, and loading skeletons.
+- Make the interface fully responsive across mobile phones, tablets, laptops, and large desktop screens.
+- Ensure dark/light theme support if compatible with the existing application. Respect the user's system theme and persist the user's explicit preference where appropriate.
+- Maintain consistent branding, favicon, logo, page titles, and site identity.
+- Ensure every interactive control has clear hover, focus, active, disabled, and loading states.
+- Do not sacrifice accessibility or performance for visual effects.
+
+Use plain CSS and reusable CSS components where consistent with the existing stack. Do not introduce a CSS framework solely for styling if the project does not already need one.
+
+## 4. FONT AWESOME ICONS THROUGHOUT THE WEBSITE
+
+Use Font Awesome icons consistently throughout all relevant pages and components.
+
+- Use icons for navigation, search, filters, categories, video cards, play actions, views, duration, favorites, bookmarks, notifications, dashboard metrics, settings, edit/delete actions, pagination, and social links.
+- Use appropriate icons in the admin dashboard, forms, status indicators, alerts, buttons, and empty states.
+- Keep icon sizing, spacing, alignment, and styling consistent.
+- Add accessible labels or `aria-label` attributes to icon-only buttons.
+- Do not use meaningless icons or replace essential text with ambiguous icons.
+- Reuse the existing Font Awesome installation if present. If a dependency is necessary, add it carefully and update the appropriate package manifest and lockfile.
+- Avoid loading multiple unnecessary icon libraries or importing the entire icon set if a smaller import is possible.
+
+## 5. HOMEPAGE INFINITE SCROLL
+
+Implement smooth, reliable infinite scrolling on the homepage while preserving the existing video retrieval logic and API compatibility.
+
+### Requirements
+
+- Load the initial batch of videos using the existing homepage data source wherever possible.
+- When the user approaches the bottom of the page, automatically fetch the next batch of videos.
+- Prefer `IntersectionObserver` with a loading sentinel instead of continuous scroll-event calculations.
+- Reuse existing pagination or cursor-based pagination if available.
+- If pagination does not exist or is unsuitable, implement it in a backward-compatible manner.
+- Preserve the current video ordering, filters, category behavior, and search behavior.
+- Prevent duplicate video cards when loading consecutive batches.
+- Prevent multiple simultaneous requests for the same page or cursor.
+- Display an attractive loading indicator or skeleton.
+- Show a clear end-of-results message when no more videos are available.
+- Provide a retry option when a request fails.
+- Handle slow networks, empty results, server errors, malformed responses, and users scrolling quickly.
+- Cancel or ignore obsolete requests when appropriate.
+- Prevent infinite request loops when the server returns no new records.
+- Keep the current URL structure and SEO-friendly links intact.
+- Ensure the initial page contains meaningful server-rendered content when the existing architecture supports SSR.
+- Do not load the entire database into the browser.
+- Keep search and category filters compatible with infinite scrolling. Reset the pagination cursor when filters change.
+- Ensure the existing non-homepage pagination and APIs continue working.
+
+## 6. BROKEN VIDEO LINK CHECKER
+
+Implement a reliable system to detect potentially broken video and thumbnail links.
+
+- Reuse existing video URL and thumbnail fields.
+- Run checks through a controlled background process or scheduled worker rather than blocking normal page requests.
+- Use bounded concurrency, request timeouts, reasonable retries, and backoff.
+- Track useful status information, such as last checked time, HTTP status, and error category, using backward-compatible storage changes if necessary.
+- Distinguish confirmed failures from temporary errors.
+- Do not automatically delete or modify video records just because a link check fails.
+- Treat 403, 429, 5xx responses, redirects, and provider-specific restrictions carefully; they do not always prove that a video is unavailable.
+- Support manual rechecking from the admin dashboard.
+- Prevent overlapping jobs and excessive requests to external providers.
+- Add SSRF protection: reject loopback, private, link-local, internal, and otherwise disallowed destinations; validate redirect destinations and DNS resolution safely.
+- Do not expose raw server errors or internal network details to public users.
+- Provide filters for healthy, potentially broken, unchecked, and temporarily unavailable links.
+
+## 7. FEATURED, POPULAR, TRENDING, AND LATEST VIDEOS
+
+Improve video discovery with clearly separated sections:
+
+- Featured Videos
+- Popular Videos
+- Trending Videos, if reliable trend data is available
+- Latest Videos
+- Relevant categories or recommended content where appropriate
+
+Requirements:
+
+- Reuse existing view counts, publication dates, and category fields where available.
+- Add optional featured flags or ordering fields only when required.
+- Keep the existing latest-video behavior and default ordering unless a compatible improvement is necessary.
+- Define the difference between Popular and Trending. For example, Popular may use total views, while Trending may use recent view activity.
+- Do not fabricate view counts or popularity metrics.
+- Ensure efficient database queries and appropriate indexes.
+- Add admin controls for featuring/unfeaturing videos if the existing admin architecture supports it.
+- Prevent unauthorized users from modifying featured status.
+
+## 8. ADVANCED SEARCH AND FILTERS
+
+Upgrade the search experience while preserving existing search URLs and API contracts.
+
+Where supported by the existing data, provide:
+
+- Search by title and description.
+- Category filtering.
+- Sorting by latest and popular.
+- Optional duration filters if the required data exists.
+- Clear filters and useful empty-result states.
+- Pagination or infinite scrolling compatible with active filters.
+- Search query persistence in the URL where appropriate.
+- Debouncing for interactive search suggestions, if implemented.
+
+Security and performance:
+
+- Validate and normalize query parameters.
+- Escape user input before using regular expressions.
+- Prevent regular-expression denial-of-service and abusive queries.
+- Do not allow arbitrary client-controlled MongoDB operators or database query objects.
+- Enforce reasonable query lengths, page sizes, sort options, and request limits.
+- Add indexes only when justified by actual query patterns.
+- Preserve the existing search endpoint and response format.
+
+## 9. ADMIN DASHBOARD
+
+Implement or improve a secure admin dashboard that fits the existing architecture.
+
+Potential dashboard features:
+
+- Total videos and category counts.
+- Recent video additions.
+- Popular videos and most-viewed content.
+- Featured video management.
+- Broken-link check status and manual recheck actions.
+- Search activity and zero-result searches, if collected safely.
+- Basic traffic and engagement analytics, if reliable data is available.
+- Recent system events and actionable error summaries.
+- Clear status indicators and loading/error states.
+
+Requirements:
+
+- Use the existing authentication and authorization mechanisms where available.
+- All admin operations must be authorized on the server, not merely hidden in the frontend.
+- Never trust a client-side admin flag.
+- Apply secure session/cookie settings and CSRF protection where applicable.
+- Validate all incoming data.
+- Add rate limits to sensitive endpoints.
+- Prevent unauthorized users from accessing admin pages or APIs.
+- Avoid exposing credentials, tokens, raw stack traces, private environment variables, or sensitive user information.
+- Require confirmation for destructive actions.
+- Use pagination for large admin tables.
+- Preserve existing admin routes and functionality.
+
+If the project does not have an authentication system, do not create an insecure hardcoded admin password. Implement a secure compatible approach or explain the necessary setup before enabling protected administrative operations.
+
+## 10. ANALYTICS DASHBOARD
+
+Add useful, accurate analytics without slowing down the public website.
+
+Where technically appropriate, track:
+
+- Daily page views.
+- Video detail views.
+- Most-viewed videos.
+- Recent content performance.
+- Search queries and searches with no results.
+- Broken-link statistics.
+- Relevant trends over time.
+
+Requirements:
+
+- Reuse existing analytics and view-count functionality where possible.
+- Avoid double-counting requests or page reloads unnecessarily.
+- Filter obvious bots where practical.
+- Do not trust client-supplied view counts.
+- Avoid collecting unnecessary personally identifiable information.
+- Apply appropriate retention and aggregation policies.
+- Protect analytics APIs with admin authorization.
+- Ensure analytics failures do not break normal page rendering or video viewing.
+- Add database indexes and aggregation queries as needed.
+- Clearly distinguish measured metrics from estimates.
+
+Do not introduce a large external analytics dependency unless it provides a clear benefit.
+
+## 11. FAVORITES AND BOOKMARKS
+
+Add a convenient way for visitors to save favorite videos.
+
+- Provide an attractive bookmark/favorite action on relevant video cards and detail pages.
+- Add a dedicated Favorites page.
+- Preserve favorite items across navigation and reloads.
+- If user accounts already exist, store favorites securely per authenticated user.
+- If there are no user accounts, use local storage as a lightweight initial solution and document its limitations.
+- Do not introduce mandatory registration solely for basic favorites unless I approve it.
+- Prevent duplicate favorite records.
+- Handle invalid or deleted videos gracefully.
+- Provide accessible controls and clear feedback.
+- Do not allow one authenticated user to read or modify another user's favorites.
+
+## 12. RECENTLY VIEWED VIDEOS
+
+Add a Recently Viewed section or page.
+
+- Track viewed videos using the existing video detail route.
+- If no account system exists, store a bounded list locally in the browser.
+- If accounts exist and account-based history is appropriate, store records securely per user.
+- Keep a sensible maximum history length, such as 50 items.
+- Move repeated visits to the top instead of creating duplicate entries.
+- Provide a clear-history option and appropriate confirmation.
+- Handle unavailable or deleted videos.
+- Do not interfere with the existing total view counter.
+- Avoid collecting unnecessary personal information.
+
+## 13. WEB PUSH NOTIFICATIONS
+
+Implement opt-in browser push notifications using the Web Push API.
+
+Potential notifications:
+
+- Newly published videos.
+- Important site announcements.
+- Featured content announcements, where appropriate.
+
+### Technical requirements
+
+- Use the existing stack and architecture.
+- Use a service worker and the browser Push API.
+- Use the Notifications API only after explicit user interaction and permission.
+- Serve the feature over HTTPS in production.
+- Generate and configure VAPID keys securely.
+- Keep the VAPID private key and all sensitive values on the server.
+- Store subscriptions safely using the existing database.
+- Validate subscription payloads and avoid duplicate subscriptions.
+- Provide subscribe, unsubscribe, and preference-management functionality.
+- Handle denied permissions, unsupported browsers, expired subscriptions, and failed delivery gracefully.
+- Remove or deactivate subscriptions when providers return permanent expiration responses, such as 404 or 410, where appropriate.
+- Ensure notification clicks open a validated, safe destination within the intended site.
+- Do not send notifications automatically without consent.
+- Avoid sending excessive, repetitive, misleading, or unsolicited notifications.
+- Provide rate limits and admin authorization for notification-sending endpoints.
+- Consider a background queue or scheduled worker if the project needs reliable delivery at scale.
+- Do not block page requests while sending notifications.
+- Preserve the existing service worker if one already exists. Merge the new functionality carefully rather than replacing existing caching, offline, or PWA functionality.
+- Provide clear configuration instructions for generating VAPID keys and setting up the feature.
+
+If a user-account system does not exist, design subscriptions so that a visitor can opt in without being forced to register, while still allowing subscription management.
+
+## 14. ENVIRONMENT VARIABLES AND SECRET MANAGEMENT
+
+**All secrets and sensitive configuration must be stored in environment variables, not hardcoded in source code.**
+
+Inspect the project for secrets and move sensitive values to `.env` where appropriate, including:
+
+- Database connection strings and credentials.
+- Session secrets and signing keys.
+- JWT secrets, if JWT is already used.
+- API keys and private tokens.
+- VAPID private keys.
+- Email/SMTP credentials.
+- External service credentials.
+- Private integration keys.
+- Other genuinely sensitive configuration values.
+
+Requirements:
+
+- Use the environment-loading mechanism compatible with the existing stack.
+- Add or update `.env.example` with placeholder values only.
+- Ensure `.env` and other secret files are ignored by Git.
+- Never put real secrets in `.env.example`, client-side JavaScript, HTML, public configuration, logs, or committed files.
+- Never expose server-only variables through frontend bundles.
+- Validate required environment variables at startup and provide safe, clear error messages.
+- Do not print secret values to logs.
+- If a real secret has already been committed to Git, explain that moving it to `.env` does not invalidate the exposed credential; recommend rotation and revocation.
+- Do not invent real API keys, passwords, tokens, or VAPID keys.
+- Keep public, non-sensitive configuration separate from private secrets.
+
+## 15. SECURITY HARDENING
+
+Audit and improve security without breaking existing functionality.
+
+Review:
+
+- Authentication and authorization.
+- Input validation and output encoding.
+- XSS and unsafe HTML rendering.
+- CSRF protection where applicable.
+- NoSQL injection and unsafe query construction.
+- SSRF risks in URL-checking functionality.
+- Rate limiting and abuse prevention.
+- Session and cookie security.
+- Secure HTTP headers.
+- CORS configuration.
+- File upload validation, if uploads exist.
+- Open redirects.
+- Secret exposure.
+- Error handling and information leakage.
+- Dependency vulnerabilities.
+- Admin endpoint protection.
+- Untrusted external URLs and redirects.
+
+Use secure defaults appropriate to the actual project. Do not blindly add middleware that breaks existing clients, APIs, embeds, or legitimate cross-origin integrations. Explain compatibility-sensitive security changes.
+
+## 16. PERFORMANCE OPTIMIZATION
+
+Improve real-world performance while preserving existing behavior.
+
+- Avoid unnecessary database queries and repeated computations.
+- Use pagination or cursors for large datasets.
+- Add justified database indexes.
+- Optimize thumbnails and images where appropriate.
+- Lazy-load below-the-fold images.
+- Set image dimensions or aspect ratios to reduce layout shifts.
+- Avoid blocking scripts and unnecessarily large frontend bundles.
+- Use caching carefully, with correct invalidation and no accidental caching of private admin data.
+- Prevent duplicate API requests.
+- Optimize expensive queries and avoid fetching unused fields where safe.
+- Keep the homepage fast on slower mobile networks.
+- Avoid loading the entire video database at once.
+- Preserve correct caching and access controls.
+- Measure improvements where tooling is available rather than claiming unverified performance scores.
+
+## 17. SEO AND ACCESSIBILITY
+
+Preserve existing SEO and improve it where appropriate.
+
+- Maintain unique page titles and descriptions.
+- Preserve canonical URLs and existing metadata.
+- Preserve Open Graph and Twitter card metadata.
+- Maintain a valid sitemap and robots.txt.
+- Use semantic HTML and a logical heading hierarchy.
+- Ensure internal links remain crawlable.
+- Preserve existing video URLs and route names.
+- Add structured data only when accurate and appropriate.
+- Avoid fake ratings, fake reviews, and fabricated metadata.
+- Ensure keyboard navigation, visible focus states, accessible forms, and useful alternative text.
+- Use sufficient color contrast.
+- Respect reduced-motion preferences.
+- Give buttons and interactive elements meaningful accessible names.
+
+## 18. ERROR HANDLING AND RELIABILITY
+
+- Use consistent error handling compatible with the existing application.
+- Add user-friendly loading, empty, success, and failure states.
+- Log useful diagnostic information without exposing secrets or private data.
+- Handle database failures and external service failures gracefully.
+- Ensure background jobs cannot run uncontrolled or overlap unnecessarily.
+- Do not allow analytics, push notifications, or link checks to crash the main website.
+- Preserve existing logging and monitoring integrations.
+- Do not silently swallow errors that should be reported.
+
+## 19. TESTING AND ACCEPTANCE CRITERIA
+
+After implementation, run the tests and checks supported by the actual project.
+
+At minimum, verify:
+
+1. The homepage loads correctly.
+2. Infinite scrolling loads additional unique videos.
+3. Scrolling does not trigger duplicate or unlimited requests.
+4. Existing routes and APIs still work.
+5. Existing search and category filtering continue working.
+6. Existing video detail pages remain accessible at their original URLs.
+7. Existing view counts and database records remain intact.
+8. Featured and popular video sections use valid data.
+9. Search handles empty, long, invalid, and malicious inputs safely.
+10. Unauthorized users cannot access admin pages or privileged APIs.
+11. Admin functions work for authorized administrators.
+12. Link checking handles timeouts, redirects, 404, 403, 429, and 5xx responses appropriately.
+13. Link checking rejects internal/private destinations and unsafe redirects.
+14. Analytics failures do not break the website.
+15. Favorites persist correctly and do not expose another user's data.
+16. Recently viewed history is bounded and can be cleared.
+17. Push notifications handle supported browsers, denied permission, unsubscribe, and expired subscriptions.
+18. Missing environment variables produce clear errors without exposing secrets.
+19. Mobile, tablet, and desktop layouts work correctly.
+20. Existing SEO metadata and important integrations remain functional.
+21. No unintended database deletion, route removal, or schema-breaking migration occurs.
+22. The application starts successfully using its documented command.
+
+Run linting, formatting checks, tests, build checks, and security checks only where the existing project supports them. Fix regressions introduced by your changes.
+
+Do not claim that a test passed unless you actually ran it and observed the result. Clearly identify tests that could not be executed.
+
+## 20. IMPLEMENTATION STRATEGY
+
+Work incrementally in this order:
+
+**Phase 1 — Audit and safety**
+- Inspect the repository and current Git changes.
+- Document existing functionality.
+- Establish a baseline.
+- Identify secrets and security risks.
+- Create a safe, backward-compatible implementation plan.
+
+**Phase 2 — UI and navigation**
+- Implement the new design system.
+- Improve responsive layouts and Font Awesome integration.
+- Preserve all existing routes and page functionality.
+
+**Phase 3 — Homepage and discovery**
+- Implement infinite scrolling.
+- Improve search and filters.
+- Add Featured, Popular, Trending, and Latest sections where supported.
+
+**Phase 4 — Administration and analytics**
+- Implement or improve the secure admin dashboard.
+- Add link-check management and analytics.
+
+**Phase 5 — Personal features**
+- Implement Favorites/Bookmarks.
+- Implement Recently Viewed.
+
+**Phase 6 — Web Push**
+- Implement secure, opt-in browser notifications.
+- Document HTTPS, VAPID, environment variables, and deployment setup.
+
+**Phase 7 — Verification**
+- Run regression tests.
+- Fix introduced bugs.
+- Review security, performance, SEO, and accessibility.
+- Document all remaining limitations.
+
+If the work is too large to complete safely in one pass, divide it into small, independently testable steps. Keep the application functional after each step. Do not make risky bulk replacements.
+
+## 21. CODE QUALITY REQUIREMENTS
+
+- Follow the project's existing conventions unless there is a clear reason to improve them.
+- Keep changes modular, readable, maintainable, and well documented.
+- Reuse existing components, helpers, middleware, and database models.
+- Avoid unnecessary dependencies.
+- Do not duplicate existing functionality.
+- Do not introduce dead code, unused imports, or unused dependencies.
+- Keep frontend and backend responsibilities separate where the current architecture supports it.
+- Add comments for complex logic and security-sensitive decisions.
+- Update documentation and `.env.example` when configuration changes.
+- Preserve existing scripts and deployment behavior.
+- Do not modify unrelated files unnecessarily.
+
+## 22. FINAL REPORT REQUIRED
+
+When finished, provide a concise but detailed report containing:
+
+1. Existing architecture and features discovered.
+2. Features successfully implemented.
+3. Files created and modified, with explanations.
+4. Existing routes and APIs preserved.
+5. Any new routes or APIs added.
+6. Database changes and backward-compatibility details.
+7. New environment variables and setup instructions.
+8. VAPID setup and Web Push deployment instructions.
+9. Tests and build commands actually executed, with their real results.
+10. Security and performance improvements.
+11. Any incomplete features, limitations, or manual steps.
+12. Deployment and rollback instructions.
+
+**FINAL NON-NEGOTIABLE RULE:** Preserve all existing working functionality. Do not remove existing logic, routes, APIs, database data, or integrations. Inspect first, modify carefully, test thoroughly, and explain every significant change. The final result should be a modern, secure, fast, responsive, maintainable, and professional P9X9.com website.

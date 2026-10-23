@@ -4,11 +4,22 @@ import axios from "axios";
 import { revalidateTag } from "next/cache";
 import { connectDB } from "@/lib/db";
 import Post from "@/models/Post";
+import { getAdmin } from "@/lib/adminAuth";
+import { rateLimit } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req) {
   try {
+    const admin = await getAdmin();
+    if (!admin) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
+    }
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (!rateLimit(`admin-add:${ip}`, 60_000, 30)) {
+      return NextResponse.json({ success: false, message: "Too many requests" }, { status: 429 });
+    }
+
     const data = await req.json().catch(() => ({}));
 
     const { routeName, title, imageLink, videoLink, duration, description, category } = data;
@@ -55,31 +66,34 @@ export async function POST(req) {
     // STEP 2: API SYNC (wait until finish)
     // =========================
     let apiSuccess = false;
-    let apiMessage = "API not attempted";
+    let apiMessage = "API sync is not configured";
+    const syncApiKey = process.env.P9X9_SYNC_API_KEY;
 
-    try {
-      const apiRes = await axios.post(
-        "https://api.p9x9.com/add-movie",
-        {
-          id: newPost.routeName.replace(/^\//, ""),
-          hadding: newPost.title,
-          img: newPost.imageLink,
-          play: newPost.videoLink
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": "pabelprfb"
+    if (syncApiKey) {
+      try {
+        await axios.post(
+          "https://api.p9x9.com/add-movie",
+          {
+            id: newPost.routeName.replace(/^\//, ""),
+            hadding: newPost.title,
+            img: newPost.imageLink,
+            play: newPost.videoLink
           },
-          timeout: 15000
-        }
-      );
+          {
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": syncApiKey
+            },
+            timeout: 15000
+          }
+        );
 
-      apiSuccess = true;
-      apiMessage = "API Sync Success";
-    } catch (apiError) {
-      apiSuccess = false;
-      apiMessage = apiError?.message || "API failed";
+        apiSuccess = true;
+        apiMessage = "API Sync Success";
+      } catch (apiError) {
+        console.error("External post sync failed:", apiError?.message);
+        apiMessage = "External API sync failed";
+      }
     }
 
     // =========================

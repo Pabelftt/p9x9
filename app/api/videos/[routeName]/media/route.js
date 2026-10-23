@@ -1,59 +1,22 @@
-import { isIP } from "node:net";
+import http from "node:http";
+import https from "node:https";
+import net from "node:net";
+import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { isLikelyPrivateHost, resolvePublicAddress } from "@/lib/linkCheck";
 import Post from "@/models/Post";
 
 export const dynamic = "force-dynamic";
 
-function isPrivateIpv4(hostname) {
-  const octets = hostname.split(".").map(Number);
-  if (octets.length !== 4 || octets.some((value) => value < 0 || value > 255)) {
-    return true;
-  }
-
-  const [first, second] = octets;
-  return (
-    first === 0 ||
-    first === 10 ||
-    first === 127 ||
-    (first === 169 && second === 254) ||
-    (first === 172 && second >= 16 && second <= 31) ||
-    (first === 192 && second === 168) ||
-    (first === 100 && second >= 64 && second <= 127) ||
-    (first === 198 && (second === 18 || second === 19)) ||
-    first >= 224
-  );
-}
-
-function isPrivateIpv6(hostname) {
-  const address = hostname.toLowerCase();
-  return (
-    address === "::" ||
-    address === "::1" ||
-    address.startsWith("fc") ||
-    address.startsWith("fd") ||
-    /^fe[89ab]/.test(address) ||
-    address.startsWith("::ffff:")
-  );
-}
-
 function isAllowedVideoUrl(value) {
   try {
     const url = new URL(value);
-    const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-    const ipVersion = isIP(hostname);
-    return (
-      (url.protocol === "https:" || url.protocol === "http:") &&
+    return ["https:", "http:"].includes(url.protocol) &&
+      url.hostname &&
       !url.username &&
       !url.password &&
-      hostname !== "localhost" &&
-      !hostname.endsWith(".localhost") &&
-      !hostname.endsWith(".local") &&
-      !hostname.endsWith(".internal") &&
-      !hostname.endsWith(".test") &&
-      !(ipVersion === 4 && isPrivateIpv4(hostname)) &&
-      !(ipVersion === 6 && isPrivateIpv6(hostname))
-    )
+      !isLikelyPrivateHost(url.hostname)
       ? url
       : null;
   } catch {
@@ -62,13 +25,74 @@ function isAllowedVideoUrl(value) {
 }
 
 function getVideoRequestHeaders(request) {
-  const headers = new Headers();
-  headers.set("accept-encoding", "identity");
+  const headers = { "accept-encoding": "identity" };
   for (const name of ["range", "if-range", "if-none-match", "if-modified-since"]) {
     const value = request.headers.get(name);
-    if (value) headers.set(name, value);
+    if (value) headers[name] = value;
   }
   return headers;
+}
+
+function getHeader(response, name) {
+  const value = response.headers[name.toLowerCase()];
+  return Array.isArray(value) ? value.join(", ") : value || null;
+}
+
+function requestVideoSource(target, address, headers, signal) {
+  return new Promise((resolve, reject) => {
+    const client = target.protocol === "https:" ? https : http;
+    const hostname = target.hostname.replace(/^\[|\]$/g, "");
+    let upstreamResponse = null;
+    let settled = false;
+    const cleanup = () => {
+      clearTimeout(headerTimer);
+      signal.removeEventListener("abort", onAbort);
+    };
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback(value);
+    };
+    const onAbort = () => {
+      request.destroy(new Error("Client request aborted"));
+      upstreamResponse?.destroy();
+    };
+    const headerTimer = setTimeout(
+      () => request.destroy(new Error("Upstream request timed out")),
+      10_000
+    );
+    const request = client.request(
+      {
+        protocol: target.protocol,
+        hostname,
+        port: target.port || undefined,
+        path: `${target.pathname}${target.search}`,
+        method: "GET",
+        headers,
+        lookup: (_host, _options, callback) =>
+          callback(null, address.address, address.family),
+        ...(target.protocol === "https:" && net.isIP(hostname) === 0
+          ? { servername: hostname }
+          : {})
+      },
+      (response) => {
+        upstreamResponse = response;
+        clearTimeout(headerTimer);
+        request.setTimeout(30_000, () =>
+          request.destroy(new Error("Upstream media stream timed out"))
+        );
+        response.once("close", () => signal.removeEventListener("abort", onAbort));
+        settled = true;
+        resolve(response);
+      }
+    );
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    if (signal.aborted) onAbort();
+    request.on("error", (error) => finish(reject, error));
+    request.end();
+  });
 }
 
 export async function GET(request, { params }) {
@@ -98,16 +122,17 @@ export async function GET(request, { params }) {
     const upstreamHeaders = getVideoRequestHeaders(request);
     let upstream;
     for (let redirects = 0; redirects <= 5; redirects += 1) {
-      upstream = await fetch(sourceUrl, {
-        method: "GET",
-        headers: upstreamHeaders,
-        cache: "no-store",
-        redirect: "manual",
-        signal: request.signal
-      });
+      const address = await resolvePublicAddress(sourceUrl.hostname, 8000);
+      upstream = await requestVideoSource(
+        sourceUrl,
+        address,
+        upstreamHeaders,
+        request.signal
+      );
 
-      if (![301, 302, 303, 307, 308].includes(upstream.status)) break;
-      const location = upstream.headers.get("location");
+      if (![301, 302, 303, 307, 308].includes(upstream.statusCode)) break;
+      const location = getHeader(upstream, "location");
+      upstream.destroy();
       if (!location || redirects === 5) {
         return new Response("Video source redirect failed", {
           status: 502,
@@ -115,7 +140,11 @@ export async function GET(request, { params }) {
         });
       }
 
-      sourceUrl = isAllowedVideoUrl(new URL(location, sourceUrl).toString());
+      try {
+        sourceUrl = isAllowedVideoUrl(new URL(location, sourceUrl).toString());
+      } catch {
+        sourceUrl = null;
+      }
       if (!sourceUrl) {
         return new Response("Unsupported video source redirect", {
           status: 502,
@@ -133,21 +162,18 @@ export async function GET(request, { params }) {
       "etag",
       "last-modified"
     ]) {
-      const value = upstream.headers.get(name);
+      const value = getHeader(upstream, name);
       if (value) responseHeaders.set(name, value);
     }
 
-    const upstreamCacheControl = upstream.headers.get("cache-control") || "";
-    const upstreamVariesByStar = upstream.headers
-      .get("vary")
+    const upstreamCacheControl = getHeader(upstream, "cache-control") || "";
+    const upstreamVariesByStar = getHeader(upstream, "vary")
       ?.split(",")
       .some((value) => value.trim() === "*");
     const isPublicMediaResponse =
-      (upstream.status === 200 ||
-        upstream.status === 206 ||
-        upstream.status === 304) &&
+      [200, 206, 304].includes(upstream.statusCode) &&
       !/\b(private|no-store|no-cache)\b/i.test(upstreamCacheControl) &&
-      !upstream.headers.has("set-cookie") &&
+      !upstream.headers["set-cookie"] &&
       !upstreamVariesByStar;
 
     responseHeaders.set(
@@ -159,13 +185,18 @@ export async function GET(request, { params }) {
           : "no-store"
     );
 
-    return new Response(upstream.body, {
-      status: upstream.status,
-      headers: responseHeaders
-    });
+    return new Response(
+      [204, 205, 304].includes(upstream.statusCode)
+        ? null
+        : Readable.toWeb(upstream),
+      {
+        status: upstream.statusCode,
+        headers: responseHeaders
+      }
+    );
   } catch (error) {
     if (request.signal.aborted) throw error;
-    console.error("Video media proxy failed:", error);
+    console.error("Video media proxy failed:", error?.message || "unknown error");
     return NextResponse.json(
       { error: "Unable to load video" },
       { status: 502, headers: { "Cache-Control": "no-store" } }

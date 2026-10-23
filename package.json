@@ -5,8 +5,8 @@
   "description": "P9X9 - Next.js rebuild (JS + CSS), all previous logic preserved",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build && node scripts/prepare-standalone.js",
+    "start": "node .next/standalone/server.js",
     "test:seed": "node scripts/test-server.js"
   },
   "dependencies": {
@@ -14,12 +14,16 @@
     "mongoose": "^9.0.0",
     "next": "^15.3.3",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "20.17.6",
     "@types/react": "19.2.18",
     "mongodb-memory-server": "^11.2.0",
     "typescript": "5.8.2"
+  },
+  "overrides": {
+    "postcss": "^8.5.30"
   }
 }

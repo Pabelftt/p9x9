@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { connectDB } from "@/lib/db";
 import Post from "@/models/Post";
+import { rateLimit, timingSafeEqual } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, X-P9X9-Sync-Key",
 };
 
 export async function OPTIONS() {
@@ -18,6 +19,25 @@ export async function OPTIONS() {
 
 export async function POST(req) {
   try {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (!rateLimit(`webs-data:${ip}`, 60_000, 120)) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: "Too many requests" }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const syncKey = process.env.DATA_SYNC_API_KEY;
+    if (
+      syncKey &&
+      !timingSafeEqual(req.headers.get("x-p9x9-sync-key") || "", syncKey)
+    ) {
+      return new NextResponse(
+        JSON.stringify({ success: false, message: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const data = await req.json().catch(() => ({}));
 
     const title = String(data.title || "").trim();
@@ -51,7 +71,7 @@ export async function POST(req) {
 
     await connectDB();
 
-    // Post model-এ unique key হলো routeName
+    // routeName is the unique key in the Post model.
     const existingPost = await Post.findOne({ routeName: postData.routeName });
 
     if (existingPost) {

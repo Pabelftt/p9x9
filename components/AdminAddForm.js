@@ -1,16 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
+import AdminIcon from "@/components/AdminIcon";
 
 // Add new post (posts JSON to /api/admin/add with toast + result box)
 const FIELDS = [
-  { id: "routeName", label: "Route Name", icon: "fa-route", placeholder: "my-new-video-post" },
-  { id: "title", label: "Title", icon: "fa-heading", placeholder: "Video title" },
-  { id: "imageLink", label: "Image Link", icon: "fa-image", placeholder: "https://..." },
-  { id: "videoLink", label: "Video Link", icon: "fa-video", placeholder: "https://..." },
-  { id: "duration", label: "Duration", icon: "fa-clock", placeholder: "mm:ss" },
-  { id: "description", label: "Description", icon: "fa-align-left", placeholder: "Short description" },
-  { id: "category", label: "Category", icon: "fa-tags", placeholder: "cat1, cat2, cat3" }
+  { id: "routeName", label: "Route Name", icon: "route", placeholder: "my-new-video-post" },
+  { id: "title", label: "Title", icon: "heading", placeholder: "Video title" },
+  { id: "imageLink", label: "Image Link", icon: "image", placeholder: "https://..." },
+  { id: "videoLink", label: "Video Link", icon: "video", placeholder: "https://..." },
+  { id: "duration", label: "Duration", icon: "clock", placeholder: "mm:ss" },
+  { id: "description", label: "Description", icon: "activity", placeholder: "Short description" },
+  { id: "category", label: "Category", icon: "tag", placeholder: "cat1, cat2, cat3" }
 ];
 
 export default function AdminAddForm() {
@@ -89,7 +90,7 @@ export default function AdminAddForm() {
             <label htmlFor={f.id}>{f.label}</label>
             <div className="adm-input-row">
               <div className="adm-input-box">
-                <i className={`fas ${f.icon}`}></i>
+                <AdminIcon name={f.icon} className="adm-icon" />
                 <input
                   id={f.id}
                   name={f.id}
@@ -100,13 +101,13 @@ export default function AdminAddForm() {
               </div>
               <div className="adm-input-tools">
                 <button type="button" className="adm-chip chip-copy" onClick={() => copyInput(f.id)} title="Copy">
-                  <i className="fas fa-copy"></i>
+                  <AdminIcon name="copy" className="adm-icon" />
                 </button>
                 <button type="button" className="adm-chip chip-paste" onClick={() => pasteInput(f.id)} title="Paste">
-                  <i className="fas fa-paste"></i>
+                  <AdminIcon name="paste" className="adm-icon" />
                 </button>
                 <button type="button" className="adm-chip chip-clear" onClick={() => clearInput(f.id)} title="Clear">
-                  <i className="fas fa-eraser"></i>
+                  <AdminIcon name="erase" className="adm-icon" />
                 </button>
               </div>
             </div>
@@ -116,11 +117,11 @@ export default function AdminAddForm() {
         <button type="submit" className="adm-btn adm-btn-primary adm-btn-block" disabled={loading}>
           {loading ? (
             <>
-              <i className="fas fa-spinner fa-spin"></i> Adding...
+              <AdminIcon name="spinner" className="adm-icon adm-icon-spin" /> Adding...
             </>
           ) : (
             <>
-              <i className="fas fa-circle-plus"></i> Add Post
+              <AdminIcon name="plus" className="adm-icon" /> Add Post
             </>
           )}
         </button>

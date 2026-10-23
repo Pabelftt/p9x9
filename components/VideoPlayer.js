@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { siteConfig } from "@/lib/siteConfig";
+import { FavoriteToggle, RecentlyViewedTracker } from "@/components/PersonalActions";
 
 export default function VideoPlayer({
   routeName,
@@ -124,6 +125,7 @@ export default function VideoPlayer({
 
   return (
     <>
+      <RecentlyViewedTracker routeName={routeName} title={oneData.title} imageLink={oneData.imageLink} />
       <div
         className="player-wrap"
         onClickCapture={(event) => {
@@ -187,8 +189,8 @@ export default function VideoPlayer({
               <h2 id="video-continue-title">Continue to the video link?</h2>
               <p id="video-continue-description">
                 {redirectAvailable
-                  ? "Continue চাপলে আপনি নির্ধারিত link-এ যাবেন। ফিরে এলে ভিডিও সরাসরি চালু হবে।"
-                  : "Continue চাপলে ভিডিও সরাসরি চালু হবে।"}
+                  ? "If you continue, you will be redirected to the selected link. When you return, the video will start directly."
+                  : "If you continue, the video will start directly."}
               </p>
               <div className="video-continue-actions">
                 <button
@@ -249,6 +251,12 @@ export default function VideoPlayer({
           >
             <i className="fab fa-facebook-messenger"></i> Join Messenger Group
           </a>
+          <FavoriteToggle
+            routeName={routeName}
+            title={oneData.title}
+            imageLink={oneData.imageLink}
+            className="action-btn ghost personal-action-button"
+          />
           <button
             type="button"
             className="action-btn ghost"

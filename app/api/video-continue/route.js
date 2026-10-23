@@ -4,6 +4,7 @@ import {
   getSafeVideoReturnPath,
   getVideoRedirectUrl
 } from "@/lib/videoContinue";
+import { getAdSettings } from "@/lib/adSettings";
 
 export async function POST(request) {
   let body;
@@ -24,8 +25,9 @@ export async function POST(request) {
 
   const createdAt = Date.now();
   const returnExpiresAt = createdAt + 300_000;
+  const adSettings = await getAdSettings();
   const response = NextResponse.json({
-    redirectAvailable: Boolean(getVideoRedirectUrl()),
+    redirectAvailable: adSettings.videoRedirect && Boolean(getVideoRedirectUrl()),
     returnExpiresAt
   });
   response.cookies.set(
@@ -50,7 +52,8 @@ export async function GET(request) {
     return NextResponse.json({ error: "Invalid return path" }, { status: 400 });
   }
 
-  const destination = getVideoRedirectUrl();
+  const adSettings = await getAdSettings();
+  const destination = adSettings.videoRedirect ? getVideoRedirectUrl() : null;
   return NextResponse.redirect(
     new URL(destination || returnPath, request.url),
     303

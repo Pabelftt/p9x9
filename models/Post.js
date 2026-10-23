@@ -17,4 +17,6 @@ const postSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+postSchema.index({ totalView: -1, _id: -1 });
+
 export default mongoose.models.Post || mongoose.model("Post", postSchema);

@@ -3,14 +3,18 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { siteConfig } from "@/lib/siteConfig";
+import AdminIcon from "@/components/AdminIcon";
 
 const NAV_LINKS = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: "fa-chart-line" },
-  { href: "/admin/add", label: "Add Post", icon: "fa-plus-circle" },
-  { href: "/admin/update", label: "Update", icon: "fa-pen-to-square" },
-  { href: "/admin/delete", label: "Delete", icon: "fa-trash-can" },
-  { href: "/api/data-to-bd-p9x9", label: "Data to Desi", icon: "fa-database" },
-  { href: "/admin/p9x9-to-links_p9x9", label: "P9X9 to Links", icon: "fa-share-nodes" }
+  { href: "/admin/dashboard", label: "Dashboard", icon: "chart" },
+  { href: "/admin/add", label: "Add Post", icon: "plus" },
+  { href: "/admin/update", label: "Update", icon: "edit" },
+  { href: "/admin/delete", label: "Delete", icon: "trash" },
+  { href: "/admin/link-check", label: "Link Check", icon: "shield" },
+  { href: "/admin/notifications", label: "Notifications", icon: "bell" },
+  { href: "/admin/ads", label: "Ads", icon: "activity" },
+  { href: "/api/data-to-bd-p9x9", label: "Data to Desi", icon: "database" },
+  { href: "/admin/p9x9-to-links_p9x9", label: "P9X9 to Links", icon: "share" }
 ];
 
 function isActive(pathname, href) {
@@ -39,7 +43,7 @@ export default function AdminShell({ title, subtitle, actions, wide = false, chi
               href={link.href}
               className={`adm-nav-link ${isActive(pathname, link.href) ? "active" : ""}`}
             >
-              <i className={`fas ${link.icon}`}></i>
+              <AdminIcon name={link.icon} className="adm-icon" />
               {link.label}
             </a>
           ))}
@@ -47,11 +51,11 @@ export default function AdminShell({ title, subtitle, actions, wide = false, chi
 
         <div className="adm-topbar-right">
           <a href="/" className="adm-btn adm-btn-ghost adm-topbar-site" title="Visit site">
-            <i className="fas fa-globe"></i>
+            <AdminIcon name="globe" className="adm-icon" />
             <span>Site</span>
           </a>
           <a href="/admin/logout" className="adm-btn adm-btn-danger-soft adm-topbar-logout">
-            <i className="fas fa-right-from-bracket"></i>
+            <AdminIcon name="logout" className="adm-icon" />
             <span>Logout</span>
           </a>
           <button
@@ -61,7 +65,7 @@ export default function AdminShell({ title, subtitle, actions, wide = false, chi
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
           >
-            <i className={`fas ${open ? "fa-xmark" : "fa-bars"}`}></i>
+            <AdminIcon name={open ? "close" : "menu"} className="adm-icon" />
           </button>
         </div>
       </header>
@@ -77,16 +81,16 @@ export default function AdminShell({ title, subtitle, actions, wide = false, chi
                 className={`adm-drawer-link ${isActive(pathname, link.href) ? "active" : ""}`}
                 onClick={() => setOpen(false)}
               >
-                <i className={`fas ${link.icon}`}></i>
+                <AdminIcon name={link.icon} className="adm-icon" />
                 {link.label}
               </a>
             ))}
             <div className="adm-drawer-sep"></div>
             <a href="/" className="adm-drawer-link">
-              <i className="fas fa-globe"></i> Visit Site
+              <AdminIcon name="globe" className="adm-icon" /> Visit Site
             </a>
             <a href="/admin/logout" className="adm-drawer-link danger">
-              <i className="fas fa-right-from-bracket"></i> Logout
+              <AdminIcon name="logout" className="adm-icon" /> Logout
             </a>
           </nav>
         </>
@@ -105,13 +109,6 @@ export default function AdminShell({ title, subtitle, actions, wide = false, chi
         {children}
       </main>
 
-      {/* FontAwesome (async, non render-blocking) */}
-      <link
-        rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        media="print"
-        onLoad={(e) => (e.currentTarget.media = "all")}
-      />
     </div>
   );
 }

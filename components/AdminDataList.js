@@ -18,6 +18,29 @@ export default function AdminDataList({ apiUrl, initialData, total, type }) {
   const sentinelRef = useRef(null);
   const listRef = useRef(null);
 
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (character) => {
+      const entities = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      };
+      return entities[character];
+    });
+  }
+
+  function safeHttpUrl(value) {
+    try {
+      const parsed = new URL(value);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        return escapeHtml(parsed.toString());
+      }
+    } catch {}
+    return "";
+  }
+
   function showToast(msg) {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(""), 2000);
@@ -111,11 +134,11 @@ export default function AdminDataList({ apiUrl, initialData, total, type }) {
   function createField(icon, name, value, placeholder, typeAttr = "text") {
     return `
       <div class="adm-input-group">
-        <label class="adm-input-label">${placeholder}</label>
+        <label class="adm-input-label">${escapeHtml(placeholder)}</label>
         <div class="adm-input-row">
           <div class="adm-input-box">
-            <i class="fas ${icon}"></i>
-            <input name="${name}" value="${value || ""}" placeholder="${placeholder}" type="${typeAttr}" autocomplete="off">
+            <i class="fas ${escapeHtml(icon)}"></i>
+            <input name="${escapeHtml(name)}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" type="${escapeHtml(typeAttr)}" autocomplete="off">
           </div>
           <div class="adm-input-tools">
             <button type="button" class="adm-chip chip-copy" title="Copy" onclick="window.copyInput(this)"><i class="fas fa-copy"></i></button>
@@ -130,11 +153,11 @@ export default function AdminDataList({ apiUrl, initialData, total, type }) {
   function desiLinkGroup(label, value, readOnly = true) {
     return `
       <div class="adm-input-group">
-        <label class="adm-input-label">${label}</label>
+        <label class="adm-input-label">${escapeHtml(label)}</label>
         <div class="adm-input-row">
           <div class="adm-input-box">
             <i class="fas fa-link"></i>
-            <input value="${value || ""}" ${readOnly ? "readonly" : ""} ${!readOnly ? `name="${label === "Route Name" ? "id" : label === "Title" ? "hadding" : label === "Image Link" ? "img" : "play"}"` : ""}>
+            <input value="${escapeHtml(value)}" ${readOnly ? "readonly" : ""} ${!readOnly ? `name="${label === "Route Name" ? "id" : label === "Title" ? "hadding" : label === "Image Link" ? "img" : "play"}"` : ""}>
           </div>
           <div class="adm-input-tools">
             <button type="button" class="adm-chip chip-copy" title="Copy" onclick="window.copyInput(this)"><i class="fas fa-copy"></i></button>
@@ -150,12 +173,12 @@ export default function AdminDataList({ apiUrl, initialData, total, type }) {
     if (type === "update") {
       return `
         <li class="adm-row">
-          <img class="adm-row-thumb" src="${item.imageLink}" alt="" loading="lazy">
+          <img class="adm-row-thumb" src="${safeHttpUrl(item.imageLink)}" alt="" loading="lazy">
           <div class="adm-row-body">
-            <b class="adm-row-title">${item.title}</b>
-            <small class="adm-row-sub">/${item.routeName}</small>
+            <b class="adm-row-title">${escapeHtml(item.title)}</b>
+            <small class="adm-row-sub">/${escapeHtml(item.routeName)}</small>
           </div>
-          <a href="/admin/update/${item._id}" class="adm-btn adm-btn-blue adm-btn-sm">
+          <a href="/admin/update/${encodeURIComponent(String(item._id))}" class="adm-btn adm-btn-blue adm-btn-sm">
             <i class="fas fa-pen"></i> Edit
           </a>
         </li>
@@ -165,17 +188,17 @@ export default function AdminDataList({ apiUrl, initialData, total, type }) {
     if (type === "delete") {
       return `
         <div class="adm-post-card">
-          <img src="${item.imageLink}" alt="${item.title}" loading="lazy">
+          <img src="${safeHttpUrl(item.imageLink)}" alt="${escapeHtml(item.title)}" loading="lazy">
           <div class="adm-post-card-body">
-            <h3>${item.title}</h3>
-            <p><span>Route</span> /${item.routeName}</p>
-            <p><span>Duration</span> ${item.duration || "—"}</p>
-            <p><span>Views</span> ${item.totalView ?? 0}</p>
+            <h3>${escapeHtml(item.title)}</h3>
+            <p><span>Route</span> /${escapeHtml(item.routeName)}</p>
+            <p><span>Duration</span> ${escapeHtml(item.duration || "—")}</p>
+            <p><span>Views</span> ${escapeHtml(item.totalView ?? 0)}</p>
             <p><span>Category</span> ${
-              Array.isArray(item.category) ? item.category.join(", ") : item.category || "—"
+              escapeHtml(Array.isArray(item.category) ? item.category.join(", ") : item.category || "—")
             }</p>
             <form action="/api/admin/delete" method="POST" class="adm-delete-form">
-              <input type="hidden" name="routeName" value="${item.routeName}">
+              <input type="hidden" name="routeName" value="${escapeHtml(item.routeName)}">
               <button type="submit" class="adm-btn adm-btn-danger adm-btn-sm">
                 <i class="fas fa-trash-can"></i> Delete
               </button>
@@ -189,9 +212,9 @@ export default function AdminDataList({ apiUrl, initialData, total, type }) {
     return `
       <form method="POST" action="https://links.p9x9.com/create" class="adm-form-card">
         <div class="adm-form-card-head">
-          <b>${item.title}</b>
+          <b>${escapeHtml(item.title)}</b>
           <div class="adm-media-links">
-            <a href="${item.imageLink}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Open</a>
+            <a href="${safeHttpUrl(item.imageLink)}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Open</a>
             <a href="/download?url=${encodeURIComponent(item.imageLink)}"><i class="fas fa-download"></i> Download</a>
           </div>
         </div>
@@ -216,11 +239,11 @@ export default function AdminDataList({ apiUrl, initialData, total, type }) {
 
   function desiCardHtml(item) {
     return `
-      <form class="adm-form-card" id="card-${item._id}" action="https://movieb-f42x.onrender.com/add/p9x9-signle-data" method="post">
+      <form class="adm-form-card" id="card-${escapeHtml(item._id)}" action="https://movieb-f42x.onrender.com/add/p9x9-signle-data" method="post">
         <div class="adm-form-card-head">
-          <b>${item.title}</b>
+          <b>${escapeHtml(item.title)}</b>
           <div class="adm-media-links">
-            <a href="${item.imageLink}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Open</a>
+            <a href="${safeHttpUrl(item.imageLink)}" target="_blank" rel="noopener noreferrer"><i class="fas fa-eye"></i> Open</a>
             <a href="/download?url=${encodeURIComponent(item.imageLink)}"><i class="fas fa-download"></i> Download</a>
           </div>
         </div>
@@ -232,7 +255,7 @@ export default function AdminDataList({ apiUrl, initialData, total, type }) {
         ${desiLinkGroup("Video Link", item.videoLink, false)}
         <div class="adm-form-card-actions">
           <button class="adm-btn adm-btn-primary adm-btn-sm" type="submit">Submit</button>
-          <button type="button" class="adm-btn adm-btn-danger-soft adm-btn-sm hide-btn" onclick="window.hideData && window.hideData('${item._id}')">Hide</button>
+          <button type="button" class="adm-btn adm-btn-danger-soft adm-btn-sm hide-btn">Hide</button>
         </div>
       </form>
     `;
@@ -268,10 +291,16 @@ export default function AdminDataList({ apiUrl, initialData, total, type }) {
         });
       });
 
-      const hideBtns = listRef.current.querySelectorAll(".hide-btn:not([onclick])");
+      const hideBtns = listRef.current.querySelectorAll(".hide-btn");
       hideBtns.forEach((btn) => {
         btn.addEventListener("click", () => {
           const form = btn.closest(".adm-form-card");
+          if (form && type === "desi") {
+            const id = (form.getAttribute("id") || "").replace("card-", "");
+            try {
+              localStorage.setItem("hide_" + id, "true");
+            } catch {}
+          }
           if (form) form.remove();
           showToast("Hidden");
         });

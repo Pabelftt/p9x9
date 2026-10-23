@@ -1,140 +1,93 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export default function SearchForm() {
+export default function SearchForm({
+  action = "/",
+  query = "",
+  category = "",
+  sort = "latest"
+}) {
+  const [categories, setCategories] = useState([]);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
-    async function initSearchForm() {
-      const res = await fetch("/data/all");
-      const data = await res.json();
-
-      if (cancelled) return;
-
-      const categories = [
-        ...new Set(data.flatMap((d) => d.category.map((c) => c.trim())))
-      ];
-      const categoryContainer = document.getElementById("categoryContainer");
-      const maxVisible = 6;
-
-      function renderCategories(showAll = false) {
-        categoryContainer.innerHTML = "";
-        const catsToShow = showAll
-          ? categories
-          : categories.slice(0, maxVisible);
-
-        catsToShow.forEach((cat) => {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.textContent = cat;
-          btn.className = "cat-pill";
-          btn.addEventListener("click", () => filterByCategory(cat));
-          categoryContainer.appendChild(btn);
-        });
-
-        if (!showAll && categories.length > maxVisible) {
-          const moreBtn = document.createElement("button");
-          moreBtn.type = "button";
-          moreBtn.textContent = "All categories";
-          moreBtn.className = "cat-pill more";
-          moreBtn.addEventListener("click", () => renderCategories(true));
-          categoryContainer.appendChild(moreBtn);
+    fetch("/api/categories", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Unable to load categories");
+        return response.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data.categories)) setCategories(data.categories);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          console.error("Failed to load video categories:", error);
         }
-      }
-
-      renderCategories();
-
-      const searchForm = document.getElementById("searchForm");
-      searchForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const query = document
-          .getElementById("searchInput")
-          .value.toLowerCase()
-          .trim();
-        const filtered = query
-          ? data.filter((d) => d.title.toLowerCase().includes(query))
-          : data;
-        renderCards(filtered);
       });
 
-      function filterByCategory(cat) {
-        const filtered = data.filter((d) =>
-          d.category.map((c) => c.trim()).includes(cat)
-        );
-        renderCards(filtered);
-      }
-
-      function cardHtml(item) {
-        return `
-          <a href="/videos/${item.routeName}" class="video-card-link">
-            <div class="video-card">
-              <div class="video-thumb">
-                <img src="${item.imageLink}" alt="${item.title}" loading="lazy" decoding="async">
-                <div class="play-overlay"><i class="fas fa-play"></i></div>
-                ${
-                  item.duration && item.duration !== "0"
-                    ? `<span class="thumb-badge badge-duration">${item.duration}</span>`
-                    : ""
-                }
-                <span class="thumb-badge badge-views"><i class="fas fa-eye"></i> ${item.totalView}</span>
-              </div>
-              <div class="video-card-body">
-                <h3 class="video-card-title">${item.title}</h3>
-                <div class="video-card-meta">
-                  <span><i class="far fa-calendar-alt"></i> ${new Date(item.createdAt).toLocaleDateString()}</span>
-                </div>
-                <div class="video-card-cats">
-                  ${item.category.map((c) => `<span>${c.trim()}</span>`).join("")}
-                </div>
-              </div>
-            </div>
-          </a>
-        `;
-      }
-
-      function renderCards(cardsData) {
-        const grid = document.querySelector(".grid");
-        if (!grid) return;
-
-        if (cardsData.length === 0) {
-          grid.innerHTML = `
-            <div class="grid-empty">
-              <i class="fas fa-search"></i>
-              No videos found
-            </div>
-          `;
-          return;
-        }
-
-        grid.innerHTML = cardsData.map(cardHtml).join("");
-      }
-    }
-
-    initSearchForm();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, []);
 
   return (
     <div className="search-section">
-      <form id="searchForm" className="search-form" role="search">
+      <form action={action} method="get" className="search-form" role="search">
         <i className="fas fa-search search-icon" aria-hidden="true"></i>
         <input
-          type="text"
-          id="searchInput"
-          placeholder="Search video..."
-          aria-label="Search video"
+          type="search"
+          name="q"
+          defaultValue={query}
+          maxLength={100}
+          placeholder="Search videos..."
+          aria-label="Search videos"
         />
-        <button type="submit" className="search-submit" aria-label="Search">
+        {category && <input type="hidden" name="category" value={category} />}
+        <label className="search-sort-label">
+          <span className="visually-hidden">Sort videos</span>
+          <select name="sort" defaultValue={sort} aria-label="Sort videos">
+            <option value="latest">Latest</option>
+            <option value="popular">Most viewed</option>
+          </select>
+        </label>
+        <button type="submit" className="search-submit">
           <i className="fas fa-search" aria-hidden="true"></i>
           <span>Search</span>
         </button>
       </form>
 
-      <div id="categoryContainer" className="cat-pills"></div>
+      <div className="cat-pills" aria-label="Video categories">
+        {(showAllCategories ? categories : categories.slice(0, 8)).map((item) => {
+          const params = new URLSearchParams();
+          params.set("category", item);
+          if (query) params.set("q", query);
+          if (sort !== "latest") params.set("sort", sort);
+          return (
+            <a
+              key={item}
+              className={`cat-pill${category === item ? " active" : ""}`}
+              href={`${action}?${params.toString()}`}
+            >
+              {item}
+            </a>
+          );
+        })}
+        {!showAllCategories && categories.length > 8 && (
+          <button
+            type="button"
+            className="cat-pill more"
+            onClick={() => setShowAllCategories(true)}
+          >
+            All categories
+          </button>
+        )}
+        {category && (
+          <a className="cat-pill more" href={action}>
+            Clear filters
+          </a>
+        )}
+      </div>
     </div>
   );
 }

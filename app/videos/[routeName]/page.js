@@ -13,13 +13,13 @@ import {
   getVideoRedirectUrl,
   getVideoReturnPath
 } from "@/lib/videoContinue";
+import { getAdSettings } from "@/lib/adSettings";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import VideoPlayer from "@/components/VideoPlayer";
 import RelatedVideosSection from "@/components/RelatedVideosSection";
 import RelatedGridSkeleton from "@/components/RelatedGridSkeleton";
 
-import Ads from "@/components/Ads";
 
 export const dynamic = "force-dynamic";
 
@@ -65,12 +65,7 @@ export default async function SingleVideoPage({ params }) {
   const routeNameLower = routeName.toLowerCase();
 
   // cached read-only query (30s) — SSR data for instant player, no client Loading flash
-  let oneData = null;
-  try {
-    oneData = await getVideoPage(routeNameLower);
-  } catch (err) {
-    console.error(err);
-  }
+  const oneData = await getVideoPage(routeNameLower);
 
   if (!oneData || !oneData.video) notFound();
 
@@ -81,6 +76,7 @@ export default async function SingleVideoPage({ params }) {
     videoReturnCookie,
     returnPath
   );
+  const adSettings = await getAdSettings();
 
   // ================= TIME FORMAT (same as old singleData) =================
   let isoTime = null;
@@ -161,7 +157,7 @@ export default async function SingleVideoPage({ params }) {
               initialData={video}
               hasContinued={Boolean(videoReturnExpiresAt)}
               continueExpiresAt={videoReturnExpiresAt}
-              redirectAvailable={Boolean(getVideoRedirectUrl())}
+              redirectAvailable={adSettings.videoRedirect && Boolean(getVideoRedirectUrl())}
             />
           </div>
 
@@ -176,7 +172,6 @@ export default async function SingleVideoPage({ params }) {
         </div>
       </main>
       <Footer />
-      <Ads />
     </>
   );
 }

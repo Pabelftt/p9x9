@@ -14,6 +14,7 @@ function RelatedCard({ item, priority }) {
             fill
             sizes="(max-width: 480px) 50vw, 160px"
             priority={priority}
+            unoptimized
           />
           <div className="play-overlay">
             <i className="fas fa-play"></i>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { siteConfig } from "@/lib/siteConfig";
+import NotificationToggle from "@/components/NotificationToggle";
 
 export default function Header() {
   const pathname = usePathname();
@@ -10,7 +11,7 @@ export default function Header() {
 
   useEffect(() => {
     const navToggle = document.getElementById("nav-toggle");
-    if (!navToggle) return;
+    if (!navToggle) return undefined;
 
     const closeMenu = () => {
       navToggle.checked = false;
@@ -47,14 +48,25 @@ export default function Header() {
         }
       });
 
-    fetch("/data/all")
-      .then((r) => r.json())
-      .then((data) => {
-        setCategories([
-          ...new Set(data.flatMap((d) => (d.category || []).map((c) => c.trim())))
-        ].slice(0, 8));
+    const controller = new AbortController();
+    fetch("/api/categories", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Request failed (${response.status})`);
+        return response.json();
       })
-      .catch(() => {});
+      .then((data) => {
+        if (!Array.isArray(data.categories)) {
+          throw new Error("The server returned an invalid category list.");
+        }
+        setCategories(data.categories.slice(0, 8));
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          console.error("Failed to load navigation categories:", error);
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   const isHome = pathname === "/";
@@ -79,6 +91,13 @@ export default function Header() {
           <a href="/videos" className={`nav-link ${pathname.startsWith("/videos") ? "active" : ""}`}>
             <i className="fas fa-play-circle"></i> Videos
           </a>
+          <a href="/favorites" className={`nav-link ${pathname === "/favorites" ? "active" : ""}`}>
+            <i className="fas fa-heart"></i> Favorites
+          </a>
+          <a href="/recently-viewed" className={`nav-link ${pathname === "/recently-viewed" ? "active" : ""}`}>
+            <i className="fas fa-history"></i> Recent
+          </a>
+          <NotificationToggle />
 
           <div className="dropdown">
             <input type="checkbox" id="about-toggle" aria-hidden="true" />
