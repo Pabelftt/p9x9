@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 const NOTIFICATION_PROMPT_DISMISSED_KEY = "p9x9-notification-prompt-dismissed";
 const NOTIFICATION_PROMPT_REPEAT_MS = 30_000;
+const NOTIFICATION_PROMPT_INITIAL_DELAY_MS = 10_000;
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -31,8 +32,8 @@ async function saveSubscription(subscription) {
 }
 
 export default function NotificationToggle() {
-  const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY;
-  const isConfigured = Boolean(publicKey && !publicKey.startsWith("replace-with-"));
+  const [publicKey, setPublicKey] = useState("");
+  const [configLoaded, setConfigLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [permission, setPermission] = useState("default");
   const [subscribed, setSubscribed] = useState(false);
@@ -47,6 +48,28 @@ export default function NotificationToggle() {
       setPermission("unsupported");
       return;
     }
+
+    const controller = new AbortController();
+    fetch("/api/notifications/config", {
+      cache: "no-store",
+      signal: controller.signal
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Notification config request failed (${response.status}).`);
+        }
+        return response.json();
+      })
+      .then((config) => {
+        setPublicKey(typeof config.publicKey === "string" ? config.publicKey : "");
+        setConfigLoaded(true);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") {
+          console.error("Unable to load notification configuration:", error);
+          setConfigLoaded(true);
+        }
+      });
 
     const current = Notification.permission;
     setPermission(current);
@@ -64,38 +87,55 @@ export default function NotificationToggle() {
         window.localStorage.removeItem(NOTIFICATION_PROMPT_DISMISSED_KEY);
         setToastVisible(false);
       } else {
-        setToastVisible(remaining === 0);
-        if (remaining > 0) {
-          promptTimer.current = window.setTimeout(() => {
-            setPermission(Notification.permission);
-            setToastVisible(Notification.permission !== "granted");
-          }, remaining);
-        }
+        const delay = Math.max(NOTIFICATION_PROMPT_INITIAL_DELAY_MS, remaining);
+        promptTimer.current = window.setTimeout(() => {
+          const latestPermission = Notification.permission;
+          setPermission(latestPermission);
+          setToastVisible(latestPermission !== "granted");
+        }, delay);
       }
     } catch (error) {
       console.error("Unable to read notification prompt preference:", error);
-      setToastVisible(current !== "granted");
+      promptTimer.current = window.setTimeout(() => {
+        const latestPermission = Notification.permission;
+        setPermission(latestPermission);
+        setToastVisible(latestPermission !== "granted");
+      }, NOTIFICATION_PROMPT_INITIAL_DELAY_MS);
     }
 
-    if (current === "granted" && "serviceWorker" in navigator) {
-      navigator.serviceWorker
-        .getRegistration()
-        .then(async (registration) => {
-          const subscription = await registration?.pushManager.getSubscription();
-          if (subscription) {
-            await saveSubscription(subscription);
-            setSubscribed(true);
-          }
-        })
-        .catch((error) => {
-          console.error("Unable to inspect notification subscription:", error);
-          setMessage(error.message || "Unable to check your notification subscription.");
-        });
+    if (current === "granted") {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .getRegistration()
+          .then(async (registration) => {
+            const subscription = await registration?.pushManager.getSubscription();
+            if (subscription) {
+              await saveSubscription(subscription);
+              setSubscribed(true);
+              return;
+            }
+            promptTimer.current = window.setTimeout(() => {
+              setToastVisible(Notification.permission === "granted");
+            }, NOTIFICATION_PROMPT_INITIAL_DELAY_MS);
+          })
+          .catch((error) => {
+            console.error("Unable to inspect notification subscription:", error);
+            setMessage(error.message || "Unable to check your notification subscription.");
+            promptTimer.current = window.setTimeout(() => {
+              setToastVisible(Notification.permission === "granted");
+            }, NOTIFICATION_PROMPT_INITIAL_DELAY_MS);
+          });
+      } else {
+        setPermission("unsupported");
+      }
     }
     return () => {
+      controller.abort();
       window.clearTimeout(promptTimer.current);
     };
   }, []);
+
+  const isConfigured = Boolean(publicKey);
 
   function clearPromptDismissal() {
     window.clearTimeout(promptTimer.current);
@@ -132,14 +172,14 @@ export default function NotificationToggle() {
     const permissionCheck = window.setInterval(() => {
       const current = Notification.permission;
       setPermission(current);
-      if (current === "granted") {
+      if (current === "granted" && subscribed) {
         setToastVisible(false);
         clearPromptDismissal();
       }
     }, 2000);
 
     return () => window.clearInterval(permissionCheck);
-  }, [toastVisible]);
+  }, [toastVisible, subscribed]);
 
   if (!mounted || permission === "unsupported") {
     return null;
@@ -195,7 +235,6 @@ export default function NotificationToggle() {
         return;
       }
 
-      setToastVisible(false);
       clearPromptDismissal();
       await navigator.serviceWorker.register("/sw.js");
       const registration = await navigator.serviceWorker.ready;
@@ -251,7 +290,9 @@ export default function NotificationToggle() {
               <p className="notification-prompt-error" role="alert">
                 {permission === "denied"
                   ? "After changing the browser setting, this message will close automatically."
-                  : "Notifications are not available right now."}
+                  : configLoaded
+                    ? "Notifications are not configured on this site yet."
+                    : "Checking notification setup..."}
               </p>
             )}
             <div className="notification-prompt-actions">
@@ -259,7 +300,7 @@ export default function NotificationToggle() {
                 type="button"
                 className="notification-prompt-enable"
                 onClick={handleToggle}
-                disabled={!isConfigured || permission === "denied"}
+                disabled={!configLoaded || !isConfigured || permission === "denied"}
               >
                 Enable notifications
               </button>

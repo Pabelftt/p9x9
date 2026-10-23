@@ -67,7 +67,7 @@ Generate a VAPID keypair with:
 npx web-push generate-vapid-keys
 ```
 
-Then set the generated public key in the browser-facing variable and the private key in the server-only variable. Keep this same key pair in the build and runtime environment, then rebuild and redeploy if either key changes. Subscriptions are stored in MongoDB, and an admin can send messages from `/admin/notifications`. Configure `WEB_PUSH_CONTACT_EMAIL` for the VAPID contact. Actual push delivery requires valid matching keys, a saved browser subscription, and HTTPS in production. Redirects accept any HTTP or HTTPS URL, as well as a path on this site; other URL schemes are rejected.
+Then set the generated public key in `NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY` and the private key in `WEB_PUSH_PRIVATE_KEY` in the deployment environment. The public key is provided to browsers by `/api/notifications/config`; the private key remains server-only. Subscriptions are saved in MongoDB after a visitor grants permission and can receive messages sent by an admin from `/admin/notifications`. Configure `WEB_PUSH_CONTACT_EMAIL` for the VAPID contact. Actual push delivery requires a matching key pair, a saved browser subscription, and HTTPS in production. Redirects accept any HTTP or HTTPS URL, as well as a path on this site; other URL schemes are rejected.
 
 ## Admin and integration secrets
 
