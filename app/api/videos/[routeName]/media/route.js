@@ -4,7 +4,11 @@ import net from "node:net";
 import { Readable } from "node:stream";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { isLikelyPrivateHost, resolvePublicAddress } from "@/lib/linkCheck";
+import {
+  createPinnedLookup,
+  isLikelyPrivateHost,
+  resolvePublicAddress
+} from "@/lib/linkCheck";
 import Post from "@/models/Post";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +29,10 @@ function isAllowedVideoUrl(value) {
 }
 
 function getVideoRequestHeaders(request) {
-  const headers = { "accept-encoding": "identity" };
+  const headers = {
+    "accept-encoding": "identity",
+    "user-agent": request.headers.get("user-agent") || "P9X9-Media/1.0"
+  };
   for (const name of ["range", "if-range", "if-none-match", "if-modified-since"]) {
     const value = request.headers.get(name);
     if (value) headers[name] = value;
@@ -70,8 +77,7 @@ function requestVideoSource(target, address, headers, signal) {
         path: `${target.pathname}${target.search}`,
         method: "GET",
         headers,
-        lookup: (_host, _options, callback) =>
-          callback(null, address.address, address.family),
+        lookup: createPinnedLookup(address),
         ...(target.protocol === "https:" && net.isIP(hostname) === 0
           ? { servername: hostname }
           : {})

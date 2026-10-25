@@ -143,7 +143,9 @@ export default function VideoPlayer({
         }}
         onPlay={(event) => {
           if (!continueGranted && !showContinue) {
-            event.currentTarget.pause();
+            if (event.target instanceof HTMLVideoElement) {
+              event.target.pause();
+            }
             setShowContinue(true);
           }
         }}

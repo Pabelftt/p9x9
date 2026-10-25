@@ -2,7 +2,11 @@ import http from "node:http";
 import https from "node:https";
 import net from "node:net";
 import { rateLimit } from "@/lib/security";
-import { isLikelyPrivateHost, resolvePublicAddress } from "@/lib/linkCheck";
+import {
+  createPinnedLookup,
+  isLikelyPrivateHost,
+  resolvePublicAddress
+} from "@/lib/linkCheck";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +50,7 @@ function requestImage(target, address, timeoutMs) {
           "user-agent": "P9X9-Image-Download/1.0",
           accept: "image/avif,image/webp,image/png,image/jpeg,image/gif,*/*;q=0.5"
         },
-        lookup: (_host, _options, callback) =>
-          callback(null, address.address, address.family),
+        lookup: createPinnedLookup(address),
         ...(target.protocol === "https:" && net.isIP(hostname) === 0
           ? { servername: hostname }
           : {})
