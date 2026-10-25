@@ -892,6 +892,13 @@ main {
   backdrop-filter: blur(5px);
 }
 
+@media (max-width: 640px), (max-height: 420px) {
+  .video-continue-backdrop {
+    position: fixed;
+    z-index: 9999;
+  }
+}
+
 .video-continue-modal {
   width: min(100%, 440px);
   padding: 28px 32px 24px;

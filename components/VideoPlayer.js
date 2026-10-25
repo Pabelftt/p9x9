@@ -15,6 +15,7 @@ export default function VideoPlayer({
   const [error, setError] = useState(null);
   const [showContinue, setShowContinue] = useState(false);
   const [continuePending, setContinuePending] = useState(false);
+  const [continueError, setContinueError] = useState("");
   const [continueGranted, setContinueGranted] = useState(hasContinued);
   const [activeContinueExpiry, setActiveContinueExpiry] =
     useState(continueExpiresAt);
@@ -51,6 +52,27 @@ export default function VideoPlayer({
   }, [videoSourceFallback]);
 
   useEffect(() => {
+    if (!hasContinued) return;
+
+    const player = document.getElementById("player");
+    if (!(player instanceof HTMLVideoElement)) return;
+
+    const startPlayback = () => {
+      player.play().catch((err) => {
+        console.error("Video playback could not start after returning:", err);
+      });
+    };
+
+    if (player.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+      startPlayback();
+      return;
+    }
+
+    player.addEventListener("loadeddata", startPlayback, { once: true });
+    return () => player.removeEventListener("loadeddata", startPlayback);
+  }, [hasContinued, routeName]);
+
+  useEffect(() => {
     if (!activeContinueExpiry) return;
 
     const timeout = Math.max(0, activeContinueExpiry - Date.now());
@@ -79,20 +101,7 @@ export default function VideoPlayer({
     if (continuePending) return;
 
     setContinuePending(true);
-    setShowContinue(false);
-    setContinueGranted(true);
-    setActiveContinueExpiry(Date.now() + 300_000);
-
-    const player = document.getElementById("player");
-    const playDirectly = () => {
-      if (player instanceof HTMLVideoElement) {
-        player.play().catch((err) => {
-          console.error("Video playback could not start:", err);
-        });
-      }
-    };
-
-    if (!redirectAvailable) playDirectly();
+    setContinueError("");
 
     try {
       const response = await fetch("/api/video-continue", {
@@ -100,27 +109,37 @@ export default function VideoPlayer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ routeName })
       });
+      const result = await response.json();
 
-      if (response.ok) {
-        const result = await response.json();
-        if (Number.isSafeInteger(result.returnExpiresAt)) {
-          setActiveContinueExpiry(result.returnExpiresAt);
-        }
-        if (result.redirectAvailable) {
-          const returnPath = `/videos/${encodeURIComponent(routeName)}`;
-          if (player instanceof HTMLVideoElement) player.pause();
-          window.location.assign(
-            `/api/video-continue?returnPath=${encodeURIComponent(returnPath)}`
-          );
-          return;
-        }
+      if (!response.ok || !Number.isSafeInteger(result.returnExpiresAt)) {
+        throw new Error(result.error || "Unable to save the video return cookie.");
+      }
+
+      setActiveContinueExpiry(result.returnExpiresAt);
+      setContinueGranted(true);
+      setShowContinue(false);
+
+      const player = document.getElementById("player");
+      if (result.redirectAvailable) {
+        if (player instanceof HTMLVideoElement) player.pause();
+        const returnPath = `/videos/${encodeURIComponent(routeName)}`;
+        window.location.assign(
+          `/api/video-continue?returnPath=${encodeURIComponent(returnPath)}`
+        );
+        return;
+      }
+
+      if (player instanceof HTMLVideoElement) {
+        player.play().catch((err) => {
+          console.error("Video playback could not start:", err);
+        });
       }
     } catch (err) {
       console.error("Unable to prepare video redirect:", err);
+      setContinueError("Unable to save your choice. Please try again.");
+    } finally {
+      setContinuePending(false);
     }
-
-    setContinuePending(false);
-    if (redirectAvailable) playDirectly();
   }
 
   return (
@@ -137,6 +156,9 @@ export default function VideoPlayer({
             return;
           }
 
+          if (event.target instanceof HTMLVideoElement) {
+            event.target.pause();
+          }
           event.preventDefault();
           event.stopPropagation();
           setShowContinue(true);
@@ -194,6 +216,11 @@ export default function VideoPlayer({
                   ? "If you continue, you will be redirected to the selected link. When you return, the video will start directly."
                   : "If you continue, the video will start directly."}
               </p>
+              {continueError && (
+                <p className="video-continue-error" role="alert">
+                  {continueError}
+                </p>
+              )}
               <div className="video-continue-actions">
                 <button
                   type="button"
